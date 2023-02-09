@@ -1,0 +1,26 @@
+{
+  "name": "trivia-bot",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node index.js",
+    "dev": "nodemon index.js",
+    "deploy": "node deploy-commands.js && node index.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "discord.js": "^14.7.1",
+    "dotenv": "^16.0.3",
+    "firebase": "^9.15.0",
+    "google-spreadsheet": "^3.3.0",
+    "string-similarity": "^4.0.4",
+    "validator": "^13.7.0"
+  },
+  "devDependencies": {
+    "eslint": "^8.30.0"
+  }
+}
