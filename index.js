@@ -25,12 +25,11 @@ const client = new Client({
 
 client.commands = new Collection();
 
-const commandsPath = path.join(__dirname, 'commands');
+const commandsPath = path.join(__dirname, 'src', 'commands');
 const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
 
 for (const file of commandFiles) {
-	const filePath = path.join(commandsPath, file);
-	const command = require(filePath);
+	const command = require(path.join(commandsPath, file));
 
 	if ('data' in command && 'execute' in command) {
 		client.commands.set(command.data.name, command);
@@ -49,6 +48,7 @@ client.once(Events.ClientReady, async clientObject => {
 
 	onValue(ref(database, 'questionSets'), (snapshot) => {
 		sets = snapshot.val() ?? {};
+		console.log('Question Sets Updated:');
 		console.log(Object.keys(sets));
 	});
 
@@ -70,25 +70,22 @@ client.on(Events.InteractionCreate, async interaction => {
 
 		try {
 			await command.execute(interaction);
-		}
-		catch (error) {
+		} catch (error) {
 			console.error(error);
 			await interaction.reply({
 				content: 'There was an error while executing this command!',
 				ephemeral: true,
 			});
 		}
-	}
-	else if (interaction.isAutocomplete) {
-		const command = interaction.client.commands.get(interaction.commandName);
-		console.log('Attempting autocomplete!');
-
+	} else if (interaction.isAutocomplete) {
+		// TODO - Autocomplete
 	} else {
 		return;
 	}
 });
 
-process.on('uncaughtException', () => {
+process.on('uncaughtException', (error) => {
+	console.error(error);
 	process.exit(1);
 });
 

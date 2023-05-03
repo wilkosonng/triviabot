@@ -1,7 +1,7 @@
 const { SlashCommandBuilder, EmbedBuilder, bold, underscore } = require('discord.js');
 const validator = require('validator');
 const sheets = require('google-spreadsheet');
-const { googleCreds, firebaseCreds } = require('../config.json');
+const { googleCreds, firebaseCreds } = require('../../config.json');
 const { initializeApp } = require('firebase/app');
 const { getDatabase, ref, set, get, remove } = require('firebase/database');
 
@@ -14,7 +14,7 @@ const database = getDatabase(firebaseApp);
 
 module.exports = {
 	data: new SlashCommandBuilder()
-		.setName('aq')
+		.setName('addquestion')
 		.setDescription('Adds a question set to the topic pool')
 		.addStringOption(option =>
 			option
@@ -44,6 +44,7 @@ module.exports = {
 		let titleExists = false;
 
 		// Returns if the title is invalid.
+
 		if (!sentenceRegex.test(title)) {
 			return interaction.editReply({
 				content: 'Invalid title. Please keep titles alphanumeric with punctuation and normal spacing!',
@@ -51,6 +52,7 @@ module.exports = {
 		}
 
 		// Returns if the description is invalid.
+
 		if (!sentenceRegex.test(description)) {
 			return interaction.editReply({
 				content: 'Invalid description. Please make sure you are using normal spacing!}',
@@ -58,6 +60,7 @@ module.exports = {
 		}
 
 		// Returns if the URL is invalid.
+
 		if (!validator.isURL(url)) {
 			return interaction.editReply({
 				content: 'Invalid URL. Please check to make sure you submitted a valid URL!',
@@ -67,6 +70,7 @@ module.exports = {
 		const match = url.match(sheetsRegex);
 
 		// Asserts the URL is properly-formatted such that the spreadsheet ID is extractable.
+
 		if (match?.groups?.id == null) {
 			return interaction.editReply({
 				content: 'Cannot find Spreadsheet ID from URL. Make sure your URL is a valid Google Sheets URL!',
@@ -74,14 +78,14 @@ module.exports = {
 		}
 
 		// Checks if title is already taken.
+
 		try {
 			await get(ref(database, `questionSets/${title}/owner`)).then((snapshot) => {
 				if (snapshot.exists()) {
 					titleExists = true;
 				}
 			});
-		}
-		catch (error) {
+		} catch (error) {
 			return interaction.editReply({
 				content: 'Database reference error.',
 			});
@@ -94,11 +98,11 @@ module.exports = {
 		}
 
 		// Attempts to access the spreadsheet.
+
 		const doc = new sheets.GoogleSpreadsheet(match.groups.id);
 		try {
 			await doc.useServiceAccountAuth(googleCreds);
-		}
-		catch (error) {
+		} catch (error) {
 			console.log(error);
 			return interaction.editReply({
 				content: 'Could not access spreadsheet (authentication issue).',
@@ -106,10 +110,10 @@ module.exports = {
 		}
 
 		// Attempts to load the info from the spreadsheet.
+
 		try {
 			await doc.loadInfo();
-		}
-		catch (error) {
+		} catch (error) {
 			console.log(error);
 			return interaction.editReply({
 				content: 'Failure to load spreadsheet. Check if your Spreadsheet ID in your Google Sheets URL is valid and that the sheet is public or shared with the bot.',
@@ -119,6 +123,7 @@ module.exports = {
 		const sheet = doc.sheetsByIndex[0];
 
 		// Attempts to load and process the spreadsheet rows.
+
 		try {
 			const rows = await sheet.getRows();
 
@@ -140,6 +145,7 @@ module.exports = {
 				const questionMatch = question.match(questionRegex);
 
 				// Asserts the question is properly-formatted.
+
 				if (questionMatch == null) {
 					return interaction.editReply({
 						content: `Failed to add question at row ${row.rowIndex}: invalid question.`,
@@ -147,6 +153,7 @@ module.exports = {
 				}
 
 				// Asserts an answer exists.
+
 				if (raw.length < 2) {
 					return interaction.editReply({
 						content: `Failed to add question ${question}: no answer pair found.`,
@@ -154,14 +161,14 @@ module.exports = {
 				}
 
 				// If an answer exists, add the question and answer pair to the question set.
+
 				questionSet.push({
 					question: questionMatch.groups.question,
 					answer: raw.slice(1),
 					multi: questionMatch.groups.ansnum ?? 0,
 				});
 			}
-		}
-		catch (error) {
+		} catch (error) {
 			console.log(error);
 			return interaction.editReply({
 				content: 'Failure to extract data. Make sure your spreadsheet is formatted correctly.',
@@ -175,7 +182,7 @@ module.exports = {
 		await set(ref(database, `questionSets/${title}`), {
 			description: description,
 			owner: user.id,
-			timestamp: new Date(),
+			timestamp: Date.now(),
 		})
 			.then(() => {
 				success = true;
@@ -220,12 +227,10 @@ module.exports = {
 				return interaction.editReply({
 					content: 'Successfully added question set!',
 				});
-			}
-			catch (error) {
+			} catch (error) {
 				console.log(error);
 			}
-		}
-		else {
+		} else {
 			// Cleans up if the operation was a half success.
 			await remove(ref(database, `questionSets/${title}`))
 				.catch((error) => {
@@ -236,5 +241,5 @@ module.exports = {
 				content: 'Upload unsuccessful! :(',
 			});
 		}
-	},
+	}
 };

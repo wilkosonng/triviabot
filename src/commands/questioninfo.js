@@ -1,5 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder, bold, underscore, time, userMention } = require('discord.js');
-const { firebaseCreds } = require('../config.json');
+const { firebaseCreds } = require('../../config.json');
 const { initializeApp } = require('firebase/app');
 const { getDatabase, ref, get } = require('firebase/database');
 
@@ -8,7 +8,7 @@ const database = getDatabase(firebaseApp);
 
 module.exports = {
 	data: new SlashCommandBuilder()
-		.setName('qi')
+		.setName('questioninfo')
 		.setDescription('Provides information on a question set')
 		.addStringOption(option =>
 			option
@@ -27,26 +27,26 @@ module.exports = {
 
 		try {
 			// Checks if title exists
+
 			await get(ref(database, `questionSets/${title}`)).then((snapshot) => {
 				if (snapshot.exists()) {
 					titleExists = true;
 					dataRes = snapshot.val();
 				}
 			});
-		}
-		catch (error) {
+		} catch (error) {
 			return interaction.editReply({
 				content: 'Database reference error.',
 			});
 		}
 
 		// If it doesn't, return with an error.
+
 		if (!titleExists) {
 			return interaction.editReply({
 				content: `No question set of name ${title}.`,
 			});
-		}
-		else {
+		} else {
 			await get(ref(database, `questionLists/${title}/questions`)).then((snapshot) => {
 				if (snapshot.exists()) {
 					questRes = snapshot.val();
@@ -55,6 +55,7 @@ module.exports = {
 		}
 
 		// Attempts to create a summary embed for the question set information
+
 		try {
 			const summary = new EmbedBuilder()
 				.setColor(0xD1576D)
@@ -63,9 +64,7 @@ module.exports = {
 				.addFields(
 					{ name: bold(underscore('Topic Creator')), value: userMention(dataRes.owner) },
 					{ name: bold(underscore('Number of Questions')), value: questRes.length.toString() },
-					{ name: bold(underscore('First Question')), value: questRes[0].question },
-					{ name: bold(underscore('Last Question')), value: questRes[questRes.length - 1].question },
-					{ name: bold(underscore('Date Created')), value: time(dataRes.timestamp) },
+					{ name: bold(underscore('Date Created')), value: time(Math.trunc(dataRes.timestamp / 1000)) },
 				)
 				.setTimestamp();
 
@@ -76,12 +75,11 @@ module.exports = {
 			return interaction.editReply({
 				content: 'Question set found!',
 			});
-		}
-		catch (error) {
+		} catch (error) {
 			console.log(error);
 			return interaction.editReply({
 				content: 'Failure to summarize question set info!',
 			});
 		}
-	},
+	}
 };
