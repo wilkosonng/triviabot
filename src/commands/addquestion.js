@@ -1,15 +1,15 @@
 const { SlashCommandBuilder, EmbedBuilder, bold, underscore } = require('discord.js');
 const validator = require('validator');
 const sheets = require('google-spreadsheet');
-const { googleCreds, firebaseCreds } = require('../../config.json');
 const { initializeApp } = require('firebase/app');
 const { getDatabase, ref, set, get, remove } = require('firebase/database');
+require('dotenv').config();
 
-const sheetsRegex = /docs\.google\.com\/spreadsheets\/d\/(?<id>[A-Za-z0-9-_]+)\//;
+const sheetsRegex = /docs\.google\.com\/spreadsheets\/d\/(?<id>[\w]+)\//;
 const sentenceRegex = /^(\S+ ?)+$/;
 const questionRegex = /^(?<tag>!!(?<ansnum>[1-9]))?(?<question>(\S+ ?)+)$/;
 
-const firebaseApp = initializeApp(firebaseCreds);
+const firebaseApp = initializeApp(JSON.parse(process.env.FIREBASE_CREDS));
 const database = getDatabase(firebaseApp);
 
 module.exports = {
@@ -101,7 +101,7 @@ module.exports = {
 
 		const doc = new sheets.GoogleSpreadsheet(match.groups.id);
 		try {
-			await doc.useServiceAccountAuth(googleCreds);
+			await doc.useServiceAccountAuth(JSON.parse(process.env.GOOGLE_CREDS));
 		} catch (error) {
 			console.log(error);
 			return interaction.editReply({
@@ -187,7 +187,7 @@ module.exports = {
 			.then(() => {
 				success = true;
 			})
-			.catch ((error) => {
+			.catch((error) => {
 				console.log(error);
 			});
 
@@ -195,7 +195,7 @@ module.exports = {
 			await set(ref(database, `questionLists/${title}`), {
 				questions: questionSet,
 			})
-				.catch ((error) => {
+				.catch((error) => {
 					success = false;
 					console.log(error);
 				});

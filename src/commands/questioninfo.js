@@ -1,9 +1,9 @@
 const { SlashCommandBuilder, EmbedBuilder, bold, underscore, time, userMention } = require('discord.js');
-const { firebaseCreds } = require('../../config.json');
 const { initializeApp } = require('firebase/app');
 const { getDatabase, ref, get } = require('firebase/database');
+require('dotenv').config();
 
-const firebaseApp = initializeApp(firebaseCreds);
+const firebaseApp = initializeApp(JSON.parse(process.env.FIREBASE_CREDS));
 const database = getDatabase(firebaseApp);
 
 module.exports = {
@@ -22,8 +22,8 @@ module.exports = {
 		const title = interaction.options.getString('title');
 
 		let titleExists = false;
-		let dataRes = null;
-		let questRes = null;
+		let dataRes;
+		let questRes;
 
 		try {
 			// Checks if title exists
