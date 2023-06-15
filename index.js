@@ -8,7 +8,7 @@ const path = require('path');
 
 require('dotenv').config();
 
-const firebaseApp = initializeApp(firebaseCreds);
+const firebaseApp = initializeApp(JSON.parse(process.env.FIREBASE_CREDS));
 const database = getDatabase(firebaseApp);
 const auth = getAuth(firebaseApp);
 
@@ -18,6 +18,7 @@ const client = new Client({
 	intents: [
 		GatewayIntentBits.Guilds,
 		GatewayIntentBits.GuildMessages,
+		GatewayIntentBits.GuildMessageReactions,
 		GatewayIntentBits.MessageContent,
 	],
 	disableEveryone: true,
@@ -38,7 +39,7 @@ for (const file of commandFiles) {
 
 client.once(Events.ClientReady, async clientObject => {
 	// Signs into the database.
-	await signInWithEmailAndPassword(auth, firebaseLogin.email, firebaseLogin.password)
+	await signInWithEmailAndPassword(auth, process.env.FIREBASE_EMAIL, process.env.FIREBASE_PASSWORD)
 		.then(() => {
 			console.log();
 		})

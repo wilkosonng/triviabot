@@ -1,0 +1,22 @@
+/* %%%%%%%%%%%%%%%%%
+ * HOW TO USE CONFIG
+ * %%%%%%%%%%%%%%%%%
+ *
+ * Fill in the information and rename this file to config.json
+ * Afterwards, delete this entire comment.
+ * The following are descriptions of what to fill in:
+ *
+ * threshold - Judgement threshold for answers. The higher, the stricter.
+ * firebaseLogin - an object with the pattern: { "email: email, "password": password }
+ * 
+*/
+
+{
+  "teams": ["Red", "Blue", "Orange", "Green"],
+  "teamEmojis": [ "1063010029260767272",
+                  "1063010027591450696", 
+                  "1063010115353059338", 
+                  "1118199752253784285"],
+
+  "threshold": 1.2
+}

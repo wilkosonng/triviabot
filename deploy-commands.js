@@ -21,7 +21,7 @@ const rest = new REST({
 (async () => {
 	try {
 		const data = await rest.put(
-			Routes.applicationGuildCommands(clientID, guildID),
+			Routes.applicationCommands(clientID),
 			{ body: commands },
 		);
 	} catch (error) {
