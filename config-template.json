@@ -6,9 +6,9 @@
  * Afterwards, delete this entire comment.
  * The following are descriptions of what to fill in:
  *
+ * teams - An array of team names
+ * teamEmojis - An array of emoji IDs with a one-to-one association with the team array.
  * threshold - Judgement threshold for answers. The higher, the stricter.
- * firebaseLogin - an object with the pattern: { "email: email, "password": password }
- * 
 */
 
 {

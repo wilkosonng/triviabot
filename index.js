@@ -1,5 +1,4 @@
 const { Client, Events, GatewayIntentBits, Collection } = require('discord.js');
-const { firebaseCreds, firebaseLogin } = require('./config.json');
 const { initializeApp } = require('firebase/app');
 const { getAuth, signInWithEmailAndPassword, signOut } = require('firebase/auth');
 const { getDatabase, onValue, ref } = require('firebase/database');
@@ -73,10 +72,7 @@ client.on(Events.InteractionCreate, async interaction => {
 			await command.execute(interaction);
 		} catch (error) {
 			console.error(error);
-			await interaction.reply({
-				content: 'There was an error while executing this command!',
-				ephemeral: true,
-			});
+			interaction.channel.send('Oopsies, something went wrong! Please contact the bot developer.');
 		}
 	} else if (interaction.isAutocomplete) {
 		// TODO - Autocomplete

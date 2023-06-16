@@ -1,5 +1,4 @@
-const { SlashCommandBuilder, Events, EmbedBuilder, ReactionCollector } = require('discord.js');
-const similarity = require('string-similarity');
+const { SlashCommandBuilder, Events, EmbedBuilder } = require('discord.js');
 const { teams, teamEmojis } = require('../../config.json');
 const { initializeApp } = require('firebase/app');
 const { getDatabase, ref, get } = require('firebase/database');
@@ -8,7 +7,7 @@ require('dotenv').config();
 
 const firebaseApp = initializeApp(JSON.parse(process.env.FIREBASE_CREDS));
 const database = getDatabase(firebaseApp);
-const currGame = { active: false };
+const currGames = new Map();
 
 module.exports = {
 	data: new SlashCommandBuilder()
@@ -41,24 +40,29 @@ module.exports = {
 	async execute(interaction) {
 		await interaction.deferReply();
 
-		if (currGame.active) {
+		if (currGames.has(interaction.channel)) {
 			await interaction.editReply('Error: Game has already started in this channel!');
 			return;
 		}
 
-		currGame.active = true;
 		let set = interaction.options?.getString('questionset');
 		const numTeams = interaction.options?.getInteger('teams') ?? 1;
 		const losePoints = interaction.options?.getBoolean('losepoints') ?? true;
 		const shuffle = interaction.options?.getBoolean('shuffle') ?? true;
 		const channel = interaction.channel;
 		const host = interaction.user;
-		const scores = new Array(numTeams).fill(0);
+		const teamInfo = new Map();
 		const players = new Map();
-		let questions;
-		let description;
-		let collector;
+		let questions, description, collector;
 		let titleExists = false;
+
+		currGames.set(channel, {});
+		for (let i = 0; i < numTeams; i++) {
+			teamInfo.set(teamEmojis[i], {
+				players: new Set(),
+				score: 0
+			});
+		}
 
 		try {
 			// If the set is undefined, chooses a random set.
@@ -109,55 +113,93 @@ module.exports = {
 			});
 		}
 
-		const startMessage = new EmbedBuilder()
-			.setColor(0xD1576D)
-			.setTitle(`🧠 ${set} ※ React to join! 🧠`)
-			.setDescription(description);
-
-		for (let i = 0; i < numTeams; i++) {
-			startMessage.addFields(
-				{
-					name: teams[i],
-					value: 'None'
+		try {
+			// Ah yes, socket timeout.
+			channel.send({
+				embeds: [generateStartEmbed()]
+			}).then(async (message) => {
+				for (let i = 0; i < numTeams; i++) {
+					await message.react(message.client.emojis.cache.get(teamEmojis[i]));
 				}
-			);
+
+				collector = message.createReactionCollector({
+					filter: (reaction, user) => !user.bot && teamEmojis.includes(reaction.emoji.id),
+					time: 120_000
+				});
+
+				collector.on('collect', (reaction, user) => {
+					const newTeam = reaction.emoji.id;
+					const player = user.id;
+
+					if (players.has(player)) {
+						const oldTeam = players.get(player)['team'];
+						if (oldTeam === newTeam) {
+							return;
+						}
+						teamInfo.get(oldTeam).players.delete(player);
+					}
+
+					teamInfo.get(newTeam).players.add(player);
+					players.set(player, {
+						team: newTeam,
+						score: 0
+					});
+
+					message.edit(
+						{
+							embeds: [generateStartEmbed()]
+						}
+					);
+					channel.send(`${user.tag} has joined the ${teams[teamEmojis.indexOf(reaction.emoji.id)]} team!`);
+				});
+			});
+
+			interaction.client.addListener(Events.MessageCreate, gameStartListener);
+		} catch (error) {
+			console.error(error);
+			return;
 		}
 
-		await channel.send({
-			embeds: [startMessage]
-		}).then(async (message) => {
+		function generateStartEmbed() {
+			const msg = new EmbedBuilder()
+				.setColor(0xD1576D)
+				.setTitle(`🧠 ${set} ※ React to join! 🧠`)
+				.setDescription(description);
+
 			for (let i = 0; i < numTeams; i++) {
-				await message.react(message.client.emojis.cache.get(teamEmojis[i]));
+				let teamPlayers = '';
+
+				teamInfo.get(teamEmojis[i]).players.forEach((e) => {
+					teamPlayers += `<@${e}>\n`;
+				});
+
+				msg.addFields(
+					{
+						name: teams[i],
+						value: teamPlayers === '' ? 'None' : teamPlayers
+					}
+				);
 			}
 
-			collector = message.createReactionCollector({
-				filter: (reaction, user) => !user.bot && teamEmojis.includes(reaction.emoji.id),
-				time: 60_000
-			});
-
-			collector.on('collect', (reaction, user) => {
-				channel.send(`${user} has joined the ${teams[teamEmojis.indexOf(reaction.emoji.id)]} team!`);
-			});
-		});
-
-		interaction.client.addListener(Events.MessageCreate, gameStartListener);
+			return msg;
+		}
 
 		// Adds listeners for the ready endtrivia triggers
 		function gameStartListener(message) {
-			if (message.author?.bot) {
+			if (message.author?.bot || message.channel !== channel) {
 				return;
 			}
 			const msg = message.content.toLowerCase();
 
 			if (msg === 'endtrivia') {
 				interaction.client.removeListener(Events.MessageCreate, gameStartListener);
-				currGame.active = false;
+				currGames.delete(channel);
 				collector.stop();
 				message.reply('Game ended');
 			} else if (message.author?.id === host?.id && msg === 'ready') {
 				interaction.client.removeListener(Events.MessageCreate, gameStartListener);
 				collector.stop();
-				playGame(currGame);
+				playGame(currGames.get(channel));
 			}
 
 			console.log(`Found message: ${message.content} from ${message.author?.id}!`);

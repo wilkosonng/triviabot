@@ -134,7 +134,3 @@ dist
 # config
 
 config.json
-
-# testing
-
-testing.js

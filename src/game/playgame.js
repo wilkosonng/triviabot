@@ -1,4 +1,5 @@
 const { threshold, teams, teamEmojis } = require('../../config.json');
+const similarity = require('string-similarity');
 const { EmbedBuilder } = require('discord.js');
 
 // Starts the game passed through.
