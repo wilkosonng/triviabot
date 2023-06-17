@@ -1,11 +1,18 @@
 const { threshold, teams, teamEmojis } = require('../../config.json');
 const similarity = require('string-similarity');
-const { EmbedBuilder } = require('discord.js');
+const { EmbedBuilder, Events } = require('discord.js');
+
+let gameCollector;
 
 // Starts the game passed through.
 
-function playGame(game) {
-	game.active = true;
+async function playGame(channel, teamInfo, players, losePoints, set, questions, client) {
+	const commandCollector = channel.createMessageCollector({
+		filter: (msg) => {
+			const content = msg.content.toLowerCase();
+			return content === 'endtrivia' || content === 'leaderboards';
+		}
+	});
 }
 
 // Defines a tolerance for how similar a submission must be to an answer to be "correct"

@@ -7,7 +7,7 @@ require('dotenv').config();
 
 const firebaseApp = initializeApp(JSON.parse(process.env.FIREBASE_CREDS));
 const database = getDatabase(firebaseApp);
-const currGames = new Map();
+const currGames = new Set();
 
 module.exports = {
 	data: new SlashCommandBuilder()
@@ -56,7 +56,7 @@ module.exports = {
 		let questions, description, collector;
 		let titleExists = false;
 
-		currGames.set(channel, {});
+		currGames.add(channel);
 		for (let i = 0; i < numTeams; i++) {
 			teamInfo.set(teamEmojis[i], {
 				players: new Set(),
@@ -115,7 +115,7 @@ module.exports = {
 
 		try {
 			// Ah yes, socket timeout.
-			channel.send({
+			await channel.send({
 				embeds: [generateStartEmbed()]
 			}).then(async (message) => {
 				for (let i = 0; i < numTeams; i++) {
@@ -154,11 +154,48 @@ module.exports = {
 				});
 			});
 
-			interaction.client.addListener(Events.MessageCreate, gameStartListener);
 		} catch (error) {
 			console.error(error);
 			return;
 		}
+
+		const startCollector = channel.createMessageCollector({
+			filter: (msg) => !msg.author.bot && (msg.content.toLowerCase() === 'endtrivia' || (msg.content.toLowerCase() === 'ready' && msg.author.id === host)),
+			time: 180_000
+		});
+
+		startCollector.on('collect', (msg) => {
+			const lowercaseMsg = msg.content.toLowerCase();
+			switch (lowercaseMsg) {
+				case 'ready': {
+					startCollector.stop();
+					collector.stop();
+					msg.reply('Game starting...');
+					playGame(channel, teamInfo, players, losePoints, set, questions, interaction.client);
+				};
+				case 'endtrivia': {
+					endGame();
+					msg.reply('Game ended');
+				};
+			}
+		});
+
+		startCollector.on('end', (collected, reason) => {
+			switch (reason) {
+				case 'time': {
+					channel.send('Game timed out');
+					break;
+				}
+				case 'user': {
+					return;
+				}
+				default: {
+					channel.send('Oops, something went wrong!');
+					break;
+				}
+			}
+			endGame();
+		});
 
 		function generateStartEmbed() {
 			const msg = new EmbedBuilder()
@@ -180,30 +217,13 @@ module.exports = {
 					}
 				);
 			}
-
 			return msg;
 		}
 
-		// Adds listeners for the ready endtrivia triggers
-		function gameStartListener(message) {
-			if (message.author?.bot || message.channel !== channel) {
-				return;
-			}
-			const msg = message.content.toLowerCase();
-
-			if (msg === 'endtrivia') {
-				interaction.client.removeListener(Events.MessageCreate, gameStartListener);
-				currGames.delete(channel);
-				collector.stop();
-				message.reply('Game ended');
-			} else if (message.author?.id === host?.id && msg === 'ready') {
-				interaction.client.removeListener(Events.MessageCreate, gameStartListener);
-				collector.stop();
-				playGame(currGames.get(channel));
-			}
-
-			console.log(`Found message: ${message.content} from ${message.author?.id}!`);
-			return;
+		function endGame() {
+			startCollector.stop();
+			collector.stop();
+			currGames.delete(channel);
 		}
 
 		// Defines a shuffle algorithm to randomize questions.
@@ -213,7 +233,6 @@ module.exports = {
 				[arr[i], arr[j]] = [arr[j], arr[i]];
 			}
 		}
-
 
 		await interaction.editReply('Game successfully started! Type \`ready\` once all users have joined or \`endtrivia\` to end the game!');
 		return;
