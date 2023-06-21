@@ -80,22 +80,24 @@ async function playGame(channel, teamInfo, players, losePoints, set, questions) 
 						embeds: [generateResultEmbed('correct', nextQuestion, losePoints, answerer.username, ans.content)]
 					});
 				} else {
-					players.get(answerer.id).score--;
-					teamInfo.get(answerTeam).score--;
+					if (losePoints) {
+						players.get(answerer.id).score--;
+						teamInfo.get(answerTeam).score--;
+					}
 					await channel.send({
 						embeds: [generateResultEmbed('incorrect', nextQuestion, losePoints, answerer.username, ans.content)]
 					});
 				}
-			} catch (err) {
-				console.error(err);
-				players.get(answerer.id).score--;
-				teamInfo.get(answerTeam).score--;
+			} catch (time) {
+				if (losePoints) {
+					players.get(answerer.id).score--;
+					teamInfo.get(answerTeam).score--;
+				}
 				await channel.send({
-					embeds: [generateResultEmbed('time', nextQuestion, losePoints, buzz.author.displayName)]
+					embeds: [generateResultEmbed('time', nextQuestion, losePoints, answerer.username)]
 				});
 			}
-		} catch (err) {
-			console.error(err);
+		} catch (nobuzz) {
 			await channel.send({
 				embeds: [generateResultEmbed('nobuzz', nextQuestion, losePoints, null)]
 			});
@@ -128,7 +130,7 @@ function generateTeamEmbed(teamInfo) {
 
 	const sorted = new Map([...(teamInfo.entries())].sort((a, b) => b[1].score - a[1].score));
 	for (const [_, info] of sorted) {
-		description += `\`${info.score} points\` - ${info.name}`;
+		description += `\`${info.score} points\` - ${info.name}\n`;
 	}
 
 	return msg.setDescription(description);
@@ -142,7 +144,7 @@ function generatePlayerEmbed(players) {
 	let description = '';
 	const sorted = new Map([...(players.entries())].sort((a, b) => b[1].score - a[1].score));
 	for (const [_, info] of sorted) {
-		description += `\`${info.score} points\` - ${info.name}`;
+		description += `\`${info.score} points\` - ${info.name}\n`;
 	}
 	return msg.setDescription(description);
 }
@@ -208,7 +210,7 @@ function generateResultEmbed(correct, question, losePoints, answerer, response) 
 				value: question.answer.join(', ')
 			});
 
-	if (response) {
+	if (response != null) {
 		msg.addFields({
 			name: 'Player Response',
 			value: [...response.values()].join(', ')
