@@ -52,7 +52,7 @@ module.exports = {
 		const channel = interaction.channel;
 		const teamInfo = new Map();
 		const players = new Map();
-		let questions, description, collector;
+		let questions, description, reactionCollector;
 		let titleExists = false;
 
 		currGames.add(channel.id);
@@ -76,10 +76,6 @@ module.exports = {
 							description = sets[set].description;
 							titleExists = true;
 						}
-					} else {
-						return interaction.editReply({
-							content: 'No question sets in database.',
-						});
 					}
 				});
 			}
@@ -98,7 +94,13 @@ module.exports = {
 		}
 
 		// If it doesn't, return with an error.
-		if (!titleExists) {
+		if (set == null) {
+			currGames.delete(channel.id);
+			return interaction.editReply({
+				content: 'No question sets found in database.',
+			});
+		} else if (!titleExists) {
+			currGames.delete(channel.id);
 			return interaction.editReply({
 				content: `No question set of name ${set}.`,
 			});
@@ -123,26 +125,40 @@ module.exports = {
 						await msg.react(msg.client.emojis.cache.get(teamEmojis[i]));
 					}
 
-					collector = msg.createReactionCollector({
-						filter: (reaction, user) => !user.bot && teamEmojis.includes(reaction.emoji.id),
+					await msg.react('❌');
+
+					reactionCollector = msg.createReactionCollector({
+						filter: (reaction, user) => !user.bot && (reaction.emoji.name === '❌' || teamEmojis.includes(reaction.emoji.id)),
 						time: 120_000
 					});
 
-					collector.on('collect', (reaction, user) => {
+					reactionCollector.on('collect', (reaction, user) => {
 						const newTeam = reaction.emoji.id;
 						const player = user.id;
 
 						if (players.has(player)) {
 							const oldTeam = players.get(player)['team'];
+
 							if (oldTeam === newTeam) {
 								return;
 							}
+
 							teamInfo.get(oldTeam).players.delete(player);
+
+							if (reaction.emoji.name === '❌') {
+								players.delete(player);
+								msg.edit(
+									{
+										embeds: [generateStartEmbed()]
+									}
+								);
+								return;
+							}
 						}
 
 						teamInfo.get(newTeam).players.add(player);
 						players.set(player, {
-							name: user.displayName,
+							name: user.username,
 							team: newTeam,
 							score: 0
 						});
@@ -157,7 +173,10 @@ module.exports = {
 
 		} catch (error) {
 			console.error(error);
-			return;
+			currGames.delete(channel.id);
+			return interaction.editReply({
+				content: 'Oops, something went wrong when preparing the set.',
+			});
 		}
 
 		const startCollector = channel.createMessageCollector({
@@ -171,9 +190,9 @@ module.exports = {
 				case 'ready': {
 					if (players.size) {
 						startCollector.stop();
-						collector.stop();
+						reactionCollector.stop();
 						msg.reply('Game starting... Type `endtrivia` to end the game, `playerlb` to access player scores, `teamlb` to access team scores, and `buzz` to buzz in for a question!');
-						await playGame(channel, teamInfo, players, losePoints, set, questions, interaction.client);
+						await playGame(channel, teamInfo, players, losePoints, set, questions);
 						currGames.delete(channel.id);
 					} else {
 						channel.send('Need at least one player to start!');
@@ -231,7 +250,7 @@ module.exports = {
 		// Thanos time
 		function endGame() {
 			startCollector.stop();
-			collector.stop();
+			reactionCollector.stop();
 			currGames.delete(channel.id);
 		}
 
