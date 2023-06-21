@@ -8,11 +8,11 @@
  *
  * teams - An array of team names
  * teamEmojis - An array of emoji IDs with a one-to-one association with the team array.
- * threshold - Judgement threshold for answers. The higher, the stricter.
+ * threshold - Judgement threshold for answers. The higher, the stricter. Default: 1.2
 */
 
 {
-  "teams": ["Red", "Blue", "Orange", "Green"],
+  "teams": ["Red", "Blue", "Yorange", "Green"],
   "teamEmojis": [ "1063010029260767272",
                   "1063010027591450696", 
                   "1063010115353059338", 
