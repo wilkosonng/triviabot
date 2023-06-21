@@ -142,6 +142,7 @@ module.exports = {
 
 						teamInfo.get(newTeam).players.add(player);
 						players.set(player, {
+							name: user.displayName,
 							team: newTeam,
 							score: 0
 						});
@@ -168,11 +169,15 @@ module.exports = {
 			const lowercaseMsg = msg.content.toLowerCase();
 			switch (lowercaseMsg) {
 				case 'ready': {
-					startCollector.stop();
-					collector.stop();
-					msg.reply('Game starting... Type `endtrivia` to end the game, `playerlb` to access player scores, `teamlb` to access team scores, and `buzz` to buzz in for a question!');
-					await playGame(channel, teamInfo, players, losePoints, set, questions, interaction.client);
-					currGames.delete(channel.id);
+					if (players.size) {
+						startCollector.stop();
+						collector.stop();
+						msg.reply('Game starting... Type `endtrivia` to end the game, `playerlb` to access player scores, `teamlb` to access team scores, and `buzz` to buzz in for a question!');
+						await playGame(channel, teamInfo, players, losePoints, set, questions, interaction.client);
+						currGames.delete(channel.id);
+					} else {
+						channel.send('Need at least one player to start!');
+					}
 					break;
 				};
 				case 'endtrivia': {
