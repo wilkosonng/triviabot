@@ -1,10 +1,10 @@
 const { threshold } = require('../../config.json');
-const similarity = require('string-similarity');
-const { EmbedBuilder, MessageCollector } = require('discord.js');
+const { stringSimilarity } = require('string-similarity-js');
+const { EmbedBuilder } = require('discord.js');
 
 // Starts the game passed through.
 
-async function playGame(channel, teamInfo, players, losePoints, set, questions, client) {
+async function playGame(channel, teamInfo, players, losePoints, set, questions) {
 	let questionNumber = 1;
 	let ended = false;
 
@@ -19,18 +19,19 @@ async function playGame(channel, teamInfo, players, losePoints, set, questions, 
 		const command = msg.content.toLowerCase();
 		switch (command) {
 			case 'endtrivia': {
+				msg.reply('Game ending after next question!');
 				endGame();
 				break;
 			}
 			case 'teamlb': {
 				channel.send({
-					embeds: [generatePlayerEmbed(teamInfo)]
+					embeds: [generateTeamEmbed(teamInfo)]
 				});
 				break;
 			}
 			case 'playerlb': {
 				channel.send({
-					embeds: [generateTeamEmbed(players)]
+					embeds: [generatePlayerEmbed(players)]
 				});
 				break;
 			}
@@ -39,56 +40,69 @@ async function playGame(channel, teamInfo, players, losePoints, set, questions, 
 
 	while (questions.length && !ended) {
 		const nextQuestion = questions.shift();
+		const questionEmbed = generateQuestionEmbed(set, questionNumber, nextQuestion);
+		const msg = await channel.send({
+			embeds: [questionEmbed]
+		});
 
-		await channel.send(
-			{
-				embeds: [generateQuestionEmbed(set, questionNumber, nextQuestion)]
-			})
-			.then((msg) => {
-				channel.awaitMessages({
-					filter: (m) => players.has(m.author.id) && m.content.toLowerCase() === 'buzz',
-					max: 1,
-					time: 20_000
-				})
-					.then((async (buzz) => {
-						const answerer = buzz.author.id;
-						const answerTeam = teamInfo.get(players.get(answerer).team);
-						msg.edit({
-							embeds: [msg.embeds[0].setDescription('_ _')]
-						});
-
-						await channel.send({
-							embeds: [generateBuzzEmbed(buzz.author.displayName, answerTeam, client)]
-						});
-
-						channel.awaitMessages({
-							filter: (m) => m.author.id === buzz.author.id,
-							max: 1,
-							time: 10_000
-						})
-							.then((ans) => {
-								if (judgeAnswer(question, ans.content)) {
-									channel.send({
-										embeds: [generateResultEmbed('correct', nextQuestion, losePoints, buzz.author.displayName, ans.content)]
-									});
-								} else {
-									channel.send({
-										embeds: [generateResultEmbed('incorrect', nextQuestion, losePoints, buzz.author.displayName, ans.content)]
-									});
-								}
-							})
-							.catch(() => {
-								channel.send({
-									embeds: [generateResultEmbed('time', nextQuestion, losePoints, buzz.author.displayName)]
-								});
-							});
-					}))
-					.catch(() => {
-						awaitchannel.send({
-							embeds: [generateResultEmbed('nobuzz', nextQuestion, losePoints, null)]
-						});
-					});
+		try {
+			const buzz = await channel.awaitMessages({
+				filter: (m) => players.has(m.author.id) && m.content.toLowerCase() === 'buzz',
+				max: 1,
+				time: 20_000,
+				errors: ['time']
 			});
+
+			const answerer = buzz.first().author;
+			const answerTeam = players.get(answerer.id).team;
+			questionEmbed.setDescription('Player has buzzed in. Question has been hidden.');
+
+			msg.edit({
+				embeds: [questionEmbed]
+			});
+
+			await channel.send({
+				embeds: [generateBuzzEmbed(answerer.username, answerTeam, msg.client)]
+			});
+
+			try {
+				const ans = await channel.awaitMessages({
+					filter: (m) => m.author.id === answerer.id,
+					max: Math.max(1, nextQuestion.multi),
+					time: 10_000,
+					errors: ['time']
+				});
+
+				if (judgeAnswer(nextQuestion, ans)) {
+					players.get(answerer.id).score++;
+					teamInfo.get(answerTeam).score++;
+					await channel.send({
+						embeds: [generateResultEmbed('correct', nextQuestion, losePoints, answerer.username, ans.content)]
+					});
+				} else {
+					players.get(answerer.id).score--;
+					teamInfo.get(answerTeam).score--;
+					await channel.send({
+						embeds: [generateResultEmbed('incorrect', nextQuestion, losePoints, answerer.username, ans.content)]
+					});
+				}
+			} catch (err) {
+				console.error(err);
+				players.get(answerer.id).score--;
+				teamInfo.get(answerTeam).score--;
+				await channel.send({
+					embeds: [generateResultEmbed('time', nextQuestion, losePoints, buzz.author.displayName)]
+				});
+			}
+		} catch (err) {
+			console.error(err);
+			await channel.send({
+				embeds: [generateResultEmbed('nobuzz', nextQuestion, losePoints, null)]
+			});
+		}
+
+		await new Promise(r => setTimeout(r, 5_000));
+		questionNumber++;
 	}
 
 	if (!ended) {
@@ -96,7 +110,8 @@ async function playGame(channel, teamInfo, players, losePoints, set, questions, 
 	}
 
 	channel.send({
-		embeds: [generateTeamEmbed(), generatePlayerEmbed()]
+		content: '## Game Ended! Final Standings:',
+		embeds: [generateTeamEmbed(teamInfo), generatePlayerEmbed(players)]
 	});
 
 	function endGame() {
@@ -105,22 +120,31 @@ async function playGame(channel, teamInfo, players, losePoints, set, questions, 
 	}
 }
 
-function generateTeamEmbed() {
+function generateTeamEmbed(teamInfo) {
 	const msg = new EmbedBuilder()
 		.setColor(0xD1576D)
-		.setTitle('🏆 Team Standings 🏆')
-		.setDescription(description);
+		.setTitle('🏆 Team Standings 🏆');
+	let description = '';
 
-	return msg;
+	const sorted = new Map([...(teamInfo.entries())].sort((a, b) => b[1].score - a[1].score));
+	for (const [_, info] of sorted) {
+		description += `\`${info.score} points\` - ${info.name}`;
+	}
+
+	return msg.setDescription(description);
 }
 
-function generatePlayerEmbed() {
+function generatePlayerEmbed(players) {
 	const msg = new EmbedBuilder()
 		.setColor(0xD1576D)
-		.setTitle('🏆 Player Standings 🏆')
-		.setDescription(description);
+		.setTitle('🏆 Player Standings 🏆');
 
-	return msg;
+	let description = '';
+	const sorted = new Map([...(players.entries())].sort((a, b) => b[1].score - a[1].score));
+	for (const [_, info] of sorted) {
+		description += `\`${info.score} points\` - ${info.name}`;
+	}
+	return msg.setDescription(description);
 }
 
 function generateQuestionEmbed(set, num, question) {
@@ -142,28 +166,32 @@ function generateBuzzEmbed(playerName, team, client) {
 	return msg;
 }
 
-function generataResultEmbed(correct, question, losePoints, answerer, response) {
+function generateResultEmbed(correct, question, losePoints, answerer, response) {
 	let emoji, message, description;
 	switch (correct) {
 		case 'correct': {
 			emoji = '✅';
 			message = 'Correct!';
 			description = `${answerer} has just scored themselves and their team 1 point!`;
+			break;
 		}
 		case 'incorrect': {
 			emoji = '❌';
 			message = 'Incorrect';
 			description = losePoints ? `${answerer} has just lost their team 1 point!` : `Unfortunately, ${answerer} did not answer correctly!`;
+			break;
 		}
 		case 'time': {
 			emoji = '⏱️';
 			message = 'Time\'s Up!';
 			description = losePoints ? `${answerer} has just lost their team 1 point!` : `Unfortunately, ${answerer} did not answer correctly!`;
+			break;
 		}
 		case 'nobuzz': {
 			emoji = '😭';
 			message = 'No takers?';
 			description = 'Cold feet, eh? No change in the standings.';
+			break;
 		}
 	}
 	const msg = new EmbedBuilder()
@@ -183,20 +211,38 @@ function generataResultEmbed(correct, question, losePoints, answerer, response) 
 	if (response) {
 		msg.addFields({
 			name: 'Player Response',
-			value: response
+			value: [...response.values()].join(', ')
 		});
 	}
 
 	return msg;
 }
 
-function judgeAnswer(question, answer) {
-	return string-similary
+function judgeAnswer(question, response) {
+	if (question.multi > 1) {
+		let correct = 0;
+		for (const res of response.values()) {
+			if (question.answer.some((ans) => {
+				return stringSimilarity(ans, res.content) > answerThreshold(ans);
+			})) {
+				correct++;
+			}
+
+			if (correct === question.multi) {
+				return true;
+			}
+		}
+		return false;
+	} else {
+		return question.answer.some((ans) => {
+			return stringSimilarity(ans, response.first().content) > answerThreshold(ans);
+		});
+	}
 }
 
 // Defines a tolerance for how similar a submission must be to an answer to be "correct"
 function answerThreshold(str) {
-	return 0.95 * Math.pow(Math.E, -(threshold / str.length()));
+	return 0.95 * Math.pow(Math.E, -(threshold / str.length));
 }
 
 module.exports = {
