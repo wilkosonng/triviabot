@@ -69,7 +69,7 @@ module.exports = {
 
 				// Attempts to remove the question set questions if the first operation was a success.
 
-				await remove(ref(database, `questionList/${title}`))
+				await remove(ref(database, `questionLists/${title}`))
 					.catch((error) => {
 						deleted = false;
 						console.log(error);
