@@ -1,6 +1,7 @@
 const { SlashCommandBuilder, EmbedBuilder, bold, underscore, time, userMention } = require('discord.js');
 const { initializeApp } = require('firebase/app');
 const { getDatabase, ref, get } = require('firebase/database');
+const { stringSimilarity } = require('string-similarity-js');
 require('dotenv').config();
 
 const firebaseApp = initializeApp(JSON.parse(process.env.FIREBASE_CREDS));
@@ -13,8 +14,15 @@ module.exports = {
 		.addStringOption(option =>
 			option
 				.setName('title')
-				.setDescription('The title of the question set you wish to remove')
-				.setRequired(true)),
+				.setDescription('The title of the question set you wish to view.')
+				.setRequired(true)
+				.setAutocomplete(true)),
+
+	async autocomplete(interaction, questionSets) {
+		const focused = interaction.options.getFocused().toLowerCase();
+		const choices = questionSets.filter((set) => set.toLowerCase().startsWith(focused) || stringSimilarity(focused, set) > 0.5);
+		await interaction.respond(choices.map((set) => ({ name: set, value: set })));
+	},
 
 	async execute(interaction) {
 		await interaction.deferReply();

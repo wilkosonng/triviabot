@@ -11,7 +11,7 @@ const firebaseApp = initializeApp(JSON.parse(process.env.FIREBASE_CREDS));
 const database = getDatabase(firebaseApp);
 const auth = getAuth(firebaseApp);
 
-let sets;
+let sets = {};
 
 const client = new Client({
 	intents: [
@@ -52,35 +52,57 @@ client.once(Events.ClientReady, async clientObject => {
 		console.log(Object.keys(sets));
 	});
 
-	console.log(`Bot ready to test knowledge! Tag: ${clientObject.user.tag}.`);
+	console.log(`Bot ready to test knowledge! Username: ${clientObject.user.username}.`);
 });
 
+// Command handler
 client.on(Events.InteractionCreate, async interaction => {
 	if (interaction.isChatInputCommand()) {
 		if (interaction.channel.isDMBased()) {
 			return;
 		}
 
-		const command = interaction.client.commands.get(interaction.commandName);
+		const commandName = interaction.commandName;
+		const command = interaction.client.commands.get(commandName);
 
 		if (!command) {
-			console.error(`No command matching ${interaction.commandName} was found.`);
+			console.error(`No command matching ${commandName} was found.`);
 			return;
 		}
 
 		try {
+			if (commandName === 'listquestions') {
+				return await command.execute(interaction, sets);
+			}
 			await command.execute(interaction);
 		} catch (error) {
 			console.error(error);
 			interaction.channel.send('Oopsies, something went wrong! Please contact the bot developer.');
 		}
-	} else if (interaction.isAutocomplete) {
-		// TODO - Autocomplete
-	} else {
-		return;
 	}
 });
 
+// Autocomplete handler
+client.on(Events.InteractionCreate, async interaction => {
+	if (!interaction.isAutocomplete()) {
+		return;
+	}
+
+	const command = interaction.client.commands.get(interaction.commandName);
+
+	if (!command) {
+		console.error(`No command matching ${interaction.commandName} was found.`);
+		return;
+	}
+
+	try {
+		await command.autocomplete(interaction, Object.keys(sets));
+	} catch (error) {
+		console.error(error);
+	}
+});
+
+// Makes sure the bot exits cleanly
 process.on('uncaughtException', (error) => {
 	console.error(error);
 	process.exit(1);

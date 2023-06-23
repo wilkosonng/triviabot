@@ -3,6 +3,7 @@ const { teams, teamEmojis } = require('../../config.json');
 const { initializeApp } = require('firebase/app');
 const { getDatabase, ref, get } = require('firebase/database');
 const { playGame } = require('../game/playgame');
+const { stringSimilarity } = require('string-similarity-js');
 require('dotenv').config();
 
 const firebaseApp = initializeApp(JSON.parse(process.env.FIREBASE_CREDS));
@@ -36,6 +37,12 @@ module.exports = {
 				.setName('losepoints')
 				.setDescription('Lose points on wrong answer? True by default.')
 				.setRequired(false)),
+
+	async autocomplete(interaction, questionSets) {
+		const focused = interaction.options.getFocused().toLowerCase();
+		const choices = questionSets.filter((set) => set.toLowerCase().startsWith(focused) || stringSimilarity(focused, set) > 0.5);
+		await interaction.respond(choices.map((set) => ({ name: set, value: set })));
+	},
 
 	async execute(interaction) {
 		await interaction.deferReply();
@@ -144,16 +151,16 @@ module.exports = {
 							}
 
 							teamInfo.get(oldTeam).players.delete(player);
+						}
 
-							if (reaction.emoji.name === '❌') {
-								players.delete(player);
-								msg.edit(
-									{
-										embeds: [generateStartEmbed()]
-									}
-								);
-								return;
-							}
+						if (reaction.emoji.name === '❌') {
+							players.delete(player);
+							msg.edit(
+								{
+									embeds: [generateStartEmbed()]
+								}
+							);
+							return;
 						}
 
 						teamInfo.get(newTeam).players.add(player);
