@@ -91,6 +91,7 @@ async function playGame(channel, teamInfo, players, losePoints, set, questions) 
 					});
 				}
 			} catch (time) {
+				console.error(time);
 				if (losePoints) {
 					players.get(answerer.id).score--;
 					teamInfo.get(answerTeam).score--;
@@ -100,6 +101,7 @@ async function playGame(channel, teamInfo, players, losePoints, set, questions) 
 				});
 			}
 		} catch (nobuzz) {
+			console.error(nobuzz);
 			await channel.send({
 				embeds: [generateResultEmbed('nobuzz', nextQuestion, losePoints, null, null)]
 			});
@@ -227,12 +229,17 @@ function generateResultEmbed(correct, question, losePoints, answerer, response) 
 }
 
 function judgeAnswer(question, response) {
+	const answers = [...question.answer];
+
 	if (question.multi > 1) {
 		let correct = 0;
 		for (const res of response.values()) {
-			// TODO: More robust multi-judging
-			if (question.answer.some((ans) => {
-				return stringSimilarity(ans, res.content) > answerThreshold(ans);
+			if (answers.some((ans) => {
+				if (stringSimilarity(ans, res.content) > answerThreshold(ans)) {
+					answers.splice(answers.indexOf(ans), 1);
+					return true;
+				}
+				return false;
 			})) {
 				correct++;
 			}
@@ -243,7 +250,7 @@ function judgeAnswer(question, response) {
 		}
 		return false;
 	} else {
-		return question.answer.some((ans) => {
+		return answers.some((ans) => {
 			return stringSimilarity(ans, response.first().content) > answerThreshold(ans);
 		});
 	}
