@@ -5,17 +5,17 @@ const { initializeApp } = require('firebase/app');
 const { getDatabase, ref, set, get, remove } = require('firebase/database');
 require('dotenv').config();
 
-const sheetsRegex = /docs\.google\.com\/spreadsheets\/d\/(?<id>[\w]+)\//;
+const sheetsRegex = /docs\.google\.com\/spreadsheets\/d\/(?<id>[\w-]+)\//;
 const sentenceRegex = /^(\S+ ?)+$/;
-const questionRegex = /^(?<tag>!!(?<ansnum>[1-9]))?(?<question>(\S+ ?)+)$/;
+const questionRegex = /^(!!(?<ansnum>[2-9]))?(!!img\[(?<img>\S+\.(png|jpg|jpeg|gif|webp))\])?(?<question>(\S+ ?)+)$/;
 
 const firebaseApp = initializeApp(JSON.parse(process.env.FIREBASE_CREDS));
 const database = getDatabase(firebaseApp);
 
 module.exports = {
 	data: new SlashCommandBuilder()
-		.setName('addquestion')
-		.setDescription('Adds a question set to the topic pool')
+		.setName('addsheet')
+		.setDescription('Adds a question set from a Google Sheet into the pool.')
 		.addStringOption(option =>
 			option
 				.setName('title')
@@ -144,9 +144,15 @@ module.exports = {
 				const question = raw[0];
 				const questionMatch = question.match(questionRegex);
 
+				if (raw.length > 100) {
+					return interaction.editReply({
+						content: 'Too many questions and answers. Please keep maximum columns to 100.',
+					});
+				}
+
 				// Asserts the question is properly-formatted.
 
-				if (questionMatch == null) {
+				if (questionMatch.groups.question == null) {
 					return interaction.editReply({
 						content: `Failed to add question at row ${row.rowIndex}: invalid question.`,
 					});
@@ -165,7 +171,8 @@ module.exports = {
 				questionSet.push({
 					question: questionMatch.groups.question,
 					answer: raw.slice(1),
-					multi: questionMatch.groups.ansnum ?? 0,
+					multi: parseInt(questionMatch.groups.ansnum) ?? 1,
+					img: questionMatch.groups.img ?? null
 				});
 			}
 		} catch (error) {
@@ -195,51 +202,45 @@ module.exports = {
 			await set(ref(database, `questionLists/${title}`), {
 				questions: questionSet,
 			})
-				.catch((error) => {
-					success = false;
-					console.log(error);
+				.catch(async (error) => {
+					console.error(error);
+
+					// Cleans up if the operation was a half success.
+					await remove(ref(database, `questionSets/${title}`));
+
+					return interaction.editReply({
+						content: 'Upload unsuccessful! :(',
+					});
 				});
 		}
 
 		// Constructs an embed summary.
+		try {
+			const summary = new EmbedBuilder()
+				.setColor(0xD1576D)
+				.setTitle(title)
+				.setDescription(description)
+				.setAuthor({
+					name: interaction.member.displayName,
+					iconURL: interaction.member.displayAvatarURL(),
+				})
+				.addFields(
+					{ name: bold(underscore('Questions Added')), value: questionSet.length.toString() },
+					{ name: bold(underscore('First Question')), value: questionSet[0].question },
+					{ name: bold(underscore('Last Question')), value: questionSet[questionSet.length - 1].question },
+				)
+				.setTimestamp();
 
-		if (success) {
-			try {
-				const summary = new EmbedBuilder()
-					.setColor(0xD1576D)
-					.setTitle(title)
-					.setDescription(description)
-					.setAuthor({
-						name: interaction.member.displayName,
-						iconURL: interaction.member.displayAvatarURL(),
-					})
-					.addFields(
-						{ name: bold(underscore('Questions Added')), value: questionSet.length.toString() },
-						{ name: bold(underscore('First Question')), value: questionSet[0].question },
-						{ name: bold(underscore('Last Question')), value: questionSet[questionSet.length - 1].question },
-					)
-					.setTimestamp();
-
-				interaction.channel.send({
-					embeds: [summary],
-				});
-
-				return interaction.editReply({
-					content: 'Successfully added question set!',
-				});
-			} catch (error) {
-				console.log(error);
-			}
-		} else {
-			// Cleans up if the operation was a half success.
-			await remove(ref(database, `questionSets/${title}`))
-				.catch((error) => {
-					console.log(error);
-				});
+			interaction.channel.send({
+				embeds: [summary],
+			});
 
 			return interaction.editReply({
-				content: 'Upload unsuccessful! :(',
+				content: 'Successfully added question set!',
 			});
+		} catch (error) {
+			console.log(error);
 		}
+
 	}
 };
