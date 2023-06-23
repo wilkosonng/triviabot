@@ -20,7 +20,7 @@ const rest = new REST({
 
 (async () => {
 	try {
-		const data = await rest.put(
+		await rest.put(
 			Routes.applicationCommands(clientID),
 			{ body: commands },
 		);
