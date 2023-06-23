@@ -3,7 +3,6 @@ const { stringSimilarity } = require('string-similarity-js');
 const { EmbedBuilder } = require('discord.js');
 
 // Starts the game passed through.
-
 async function playGame(channel, teamInfo, players, losePoints, set, questions) {
 	let questionNumber = 1;
 	let ended = false;
@@ -55,21 +54,24 @@ async function playGame(channel, teamInfo, players, losePoints, set, questions) 
 
 			const answerer = buzz.first().author;
 			const answerTeam = players.get(answerer.id).team;
-			questionEmbed.setDescription('Player has buzzed in. Question has been hidden.');
+			const numAnswers = nextQuestion.multi;
+			questionEmbed
+				.setDescription('Player has buzzed in. Question has been hidden.')
+				.setImage(null);
 
 			msg.edit({
 				embeds: [questionEmbed]
 			});
 
 			await channel.send({
-				embeds: [generateBuzzEmbed(answerer.username, answerTeam, msg.client)]
+				embeds: [generateBuzzEmbed(answerer.username, answerTeam, msg.client, numAnswers)]
 			});
 
 			try {
 				const ans = await channel.awaitMessages({
-					filter: (m) => m.author.id === answerer.id,
-					max: Math.max(1, nextQuestion.multi),
-					time: 10_000,
+					filter: (m) => m.author.id === answerer.id && !['endtrivia', 'playerlb', 'teamlb'].includes(m.content),
+					max: numAnswers,
+					time: 10_000 * numAnswers,
 					errors: ['time']
 				});
 
@@ -77,7 +79,7 @@ async function playGame(channel, teamInfo, players, losePoints, set, questions) 
 					players.get(answerer.id).score++;
 					teamInfo.get(answerTeam).score++;
 					await channel.send({
-						embeds: [generateResultEmbed('correct', nextQuestion, losePoints, answerer.username, ans.content)]
+						embeds: [generateResultEmbed('correct', nextQuestion, losePoints, answerer.username, ans)]
 					});
 				} else {
 					if (losePoints) {
@@ -85,7 +87,7 @@ async function playGame(channel, teamInfo, players, losePoints, set, questions) 
 						teamInfo.get(answerTeam).score--;
 					}
 					await channel.send({
-						embeds: [generateResultEmbed('incorrect', nextQuestion, losePoints, answerer.username, ans.content)]
+						embeds: [generateResultEmbed('incorrect', nextQuestion, losePoints, answerer.username, ans)]
 					});
 				}
 			} catch (time) {
@@ -99,7 +101,7 @@ async function playGame(channel, teamInfo, players, losePoints, set, questions) 
 			}
 		} catch (nobuzz) {
 			await channel.send({
-				embeds: [generateResultEmbed('nobuzz', nextQuestion, losePoints, null)]
+				embeds: [generateResultEmbed('nobuzz', nextQuestion, losePoints, null, null)]
 			});
 		}
 
@@ -126,8 +128,8 @@ function generateTeamEmbed(teamInfo) {
 	const msg = new EmbedBuilder()
 		.setColor(0xD1576D)
 		.setTitle('🏆 Team Standings 🏆');
-	let description = '';
 
+	let description = '';
 	const sorted = new Map([...(teamInfo.entries())].sort((a, b) => b[1].score - a[1].score));
 	for (const [_, info] of sorted) {
 		description += `\`${info.score} points\` - ${info.name}\n`;
@@ -153,17 +155,21 @@ function generateQuestionEmbed(set, num, question) {
 	const msg = new EmbedBuilder()
 		.setColor(0xD1576D)
 		.setTitle(`❔ ${set} ※ Question ${num} ❔`)
-		.setDescription(question?.question ?? '_ _');
+		.setDescription(`${question.multi > 1 ? 'This is a ' + question.multi + ' part question. ' : ''}${question?.question ?? '_ _'}`);
+
+	if (question.img) {
+		msg.setImage(question.img);
+	}
 
 	return msg;
 }
 
-function generateBuzzEmbed(playerName, team, client) {
+function generateBuzzEmbed(playerName, team, client, numAnswers) {
 	const emoji = client.emojis.cache.get(team);
 	const msg = new EmbedBuilder()
 		.setColor(0xD1576D)
 		.setTitle(`${emoji} ${playerName} has buzzed in! ${emoji}`)
-		.setDescription('You have 10 seconds to answer!');
+		.setDescription(`You have ${10 * numAnswers} seconds to answer!`);
 
 	return msg;
 }
@@ -224,6 +230,7 @@ function judgeAnswer(question, response) {
 	if (question.multi > 1) {
 		let correct = 0;
 		for (const res of response.values()) {
+			// TODO: More robust multi-judging
 			if (question.answer.some((ans) => {
 				return stringSimilarity(ans, res.content) > answerThreshold(ans);
 			})) {
