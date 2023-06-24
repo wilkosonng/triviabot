@@ -72,7 +72,7 @@ module.exports = {
 				.addFields(
 					{ name: bold(underscore('Topic Creator')), value: userMention(dataRes.owner) },
 					{ name: bold(underscore('Number of Questions')), value: questRes.length.toString() },
-					{ name: bold(underscore('Date Created')), value: time(Math.trunc(dataRes.timestamp / 1000)) },
+					{ name: bold(underscore('Date Created')), value: time(dataRes.timestamp) },
 				)
 				.setTimestamp();
 

@@ -189,7 +189,7 @@ module.exports = {
 		await set(ref(database, `questionSets/${title}`), {
 			description: description,
 			owner: user.id,
-			timestamp: Date.now(),
+			timestamp: (Date.now() / 1000) | 0,
 		})
 			.then(() => {
 				success = true;
