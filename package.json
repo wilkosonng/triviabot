@@ -17,7 +17,6 @@
     "dotenv": "^16.0.3",
     "firebase": "^9.15.0",
     "google-spreadsheet": "^3.3.0",
-    "htmlparser2": "^9.0.0",
     "puppeteer": "^20.7.3",
     "puppeteer-extra": "^3.3.6",
     "puppeteer-extra-plugin-adblocker": "^2.13.6",
