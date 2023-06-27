@@ -91,7 +91,6 @@ async function playGame(channel, teamInfo, players, losePoints, set, questions) 
 					});
 				}
 			} catch (time) {
-				console.error(time);
 				if (losePoints) {
 					players.get(answerer.id).score--;
 					teamInfo.get(answerTeam).score--;
@@ -101,7 +100,6 @@ async function playGame(channel, teamInfo, players, losePoints, set, questions) 
 				});
 			}
 		} catch (nobuzz) {
-			console.error(nobuzz);
 			await channel.send({
 				embeds: [generateResultEmbed('nobuzz', nextQuestion, losePoints, null, null)]
 			});
@@ -126,6 +124,11 @@ async function playGame(channel, teamInfo, players, losePoints, set, questions) 
 	}
 }
 
+/* %%%%%%%%%%%%%%%%
+ * EMBED GENERATORS
+ * %%%%%%%%%%%%%%%%
+ * TODO: Maybe move all embeds across the bot to a single embed file.
+*/
 function generateTeamEmbed(teamInfo) {
 	const msg = new EmbedBuilder()
 		.setColor(0xD1576D)
@@ -208,7 +211,7 @@ function generateResultEmbed(correct, question, losePoints, answerer, response) 
 		.setColor(0xD1576D)
 		.setTitle(`${emoji} ${message} ${emoji}`)
 		.setDescription(description)
-		.addFields(
+		.setFields(
 			{
 				name: 'Question',
 				value: question.question
@@ -228,10 +231,12 @@ function generateResultEmbed(correct, question, losePoints, answerer, response) 
 	return msg;
 }
 
+// Judges the answers for correctness using string similarity.
 function judgeAnswer(question, response) {
 	const answers = [...question.answer];
 
 	if (question.multi > 1) {
+		// If the question is a multi-part question, judges all parts.
 		let correct = 0;
 		for (const res of response.values()) {
 			if (answers.some((ans) => {
@@ -250,6 +255,7 @@ function judgeAnswer(question, response) {
 		}
 		return false;
 	} else {
+		// For single-part questions, simply returns if the response is close enough to one of the answers.
 		return answers.some((ans) => {
 			return stringSimilarity(ans, response.first().content) > answerThreshold(ans);
 		});
