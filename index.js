@@ -72,7 +72,7 @@ client.on(Events.InteractionCreate, async interaction => {
 
 		try {
 			if (commandName === 'listquestions') {
-				return await command.execute(interaction, sets);
+				return await command.execute(interaction, Object.entries(sets));
 			}
 			await command.execute(interaction);
 		} catch (error) {
