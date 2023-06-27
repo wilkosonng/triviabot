@@ -235,7 +235,8 @@ module.exports = {
 			const msg = new EmbedBuilder()
 				.setColor(0xD1576D)
 				.setTitle(`🧠 ${set} ※ React to join! 🧠`)
-				.setDescription(description);
+				.setDescription(description)
+				.setTimestamp();
 
 			for (let i = 0; i < numTeams; i++) {
 				let teamPlayers = '';
