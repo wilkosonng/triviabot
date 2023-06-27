@@ -45,17 +45,17 @@ module.exports = {
 
 		// Returns if the title is invalid.
 
-		if (!sentenceRegex.test(title)) {
+		if (!sentenceRegex.test(title) || title.length > 60) {
 			return interaction.editReply({
-				content: 'Invalid title. Please keep titles alphanumeric with punctuation and normal spacing!',
+				content: 'Invalid title. Please keep titles at most 60 characters with alphanumeric with punctuation and normal spacing!',
 			});
 		}
 
 		// Returns if the description is invalid.
 
-		if (!sentenceRegex.test(description)) {
+		if (!sentenceRegex.test(description) || description.length > 300) {
 			return interaction.editReply({
-				content: 'Invalid description. Please make sure you are using normal spacing!}',
+				content: 'Invalid description. Please make sure you are using normal spacing and the description is at most 300 characters!}',
 			});
 		}
 
@@ -121,6 +121,7 @@ module.exports = {
 		}
 
 		const sheet = doc.sheetsByIndex[0];
+		let success = false;
 
 		// Attempts to load and process the spreadsheet rows.
 
@@ -133,7 +134,7 @@ module.exports = {
 				});
 			}
 
-			if (rows.length >= 1000) {
+			if (rows.length > 1000) {
 				return interaction.editReply({
 					content: 'Too many questions and answers. Please keep maximum rows to 1000. Split up the question set if necessary.',
 				});
@@ -171,7 +172,7 @@ module.exports = {
 				questionSet.push({
 					question: questionMatch.groups.question,
 					answer: raw.slice(1),
-					multi: parseInt(questionMatch.groups.ansnum) ?? 1,
+					multi: questionMatch.groups.ansnum ? parseInt(questionMatch.groups.ansnum) : 1,
 					img: questionMatch.groups.img ?? null
 				});
 			}
@@ -183,8 +184,6 @@ module.exports = {
 		}
 
 		// Attempts to add the trivia to the database.
-
-		let success = false;
 
 		await set(ref(database, `questionSets/${title}`), {
 			description: description,
@@ -224,7 +223,7 @@ module.exports = {
 					name: interaction.member.displayName,
 					iconURL: interaction.member.displayAvatarURL(),
 				})
-				.addFields(
+				.setFields(
 					{ name: bold(underscore('Questions Added')), value: questionSet.length.toString() },
 					{ name: bold(underscore('First Question')), value: questionSet[0].question },
 					{ name: bold(underscore('Last Question')), value: questionSet[questionSet.length - 1].question },
