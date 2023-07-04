@@ -93,7 +93,7 @@ module.exports = {
 
 		if (deleted) {
 			return interaction.editReply({
-				content: 'Successfully removed question set!',
+				content: `Successfully removed question set ${title}!`,
 			});
 		} else {
 			return interaction.editReply({
