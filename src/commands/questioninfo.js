@@ -1,7 +1,8 @@
-const { SlashCommandBuilder, EmbedBuilder, bold, underscore, time, userMention } = require('discord.js');
+const { SlashCommandBuilder } = require('discord.js');
 const { initializeApp } = require('firebase/app');
 const { getDatabase, ref, get } = require('firebase/database');
 const { stringSimilarity } = require('string-similarity-js');
+const { QuestionInfoEmbed } = require('../helpers/embeds.js');
 require('dotenv').config();
 
 const firebaseApp = initializeApp(JSON.parse(process.env.FIREBASE_CREDS));
@@ -35,7 +36,6 @@ module.exports = {
 
 		try {
 			// Checks if title exists
-
 			await get(ref(database, `questionSets/${title}`)).then((snapshot) => {
 				if (snapshot.exists()) {
 					titleExists = true;
@@ -49,7 +49,6 @@ module.exports = {
 		}
 
 		// If it doesn't, return with an error.
-
 		if (!titleExists) {
 			return interaction.editReply({
 				content: `No question set of name ${title}.`,
@@ -63,18 +62,8 @@ module.exports = {
 		}
 
 		// Attempts to create a summary embed for the question set information
-
 		try {
-			const summary = new EmbedBuilder()
-				.setColor(0xD1576D)
-				.setTitle(title)
-				.setDescription(dataRes.description)
-				.addFields(
-					{ name: bold(underscore('Topic Creator')), value: userMention(dataRes.owner) },
-					{ name: bold(underscore('Number of Questions')), value: questRes.length.toString() },
-					{ name: bold(underscore('Date Created')), value: time(dataRes.timestamp) },
-				)
-				.setTimestamp();
+			const summary = QuestionInfoEmbed(title, questRes.length, dataRes);
 
 			interaction.channel.send({
 				embeds: [summary],

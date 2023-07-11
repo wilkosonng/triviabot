@@ -34,9 +34,7 @@ module.exports = {
 		let titleExists = false;
 
 		try {
-
 			// Checks if title exists
-
 			await get(ref(database, `questionSets/${title}/owner`)).then((snapshot) => {
 				if (snapshot.exists()) {
 					titleExists = true;
@@ -50,7 +48,6 @@ module.exports = {
 		}
 
 		// If it doesn't, return with an error.
-
 		if (!titleExists) {
 			return interaction.editReply({
 				content: `No question set of name ${title}.`,
@@ -60,11 +57,9 @@ module.exports = {
 		let deleted = false;
 
 		// Checks if the user has sufficient permissions.
-
 		if (owner === user.id || user.permissions.has(PermissionsBitField.Flags.Administrator)) {
 
 			// Attempts to remove the question set data if they do.
-
 			await remove(ref(database, `questionSets/${title}`))
 				.then(() => {
 					deleted = true;
@@ -76,7 +71,6 @@ module.exports = {
 			if (deleted) {
 
 				// Attempts to remove the question set questions if the first operation was a success.
-
 				await remove(ref(database, `questionLists/${title}`))
 					.catch((error) => {
 						deleted = false;
@@ -90,7 +84,6 @@ module.exports = {
 		}
 
 		// Returns with the status of if the deletion was auccess
-
 		if (deleted) {
 			return interaction.editReply({
 				content: `Successfully removed question set ${title}!`,

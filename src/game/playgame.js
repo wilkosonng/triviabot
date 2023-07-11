@@ -1,6 +1,6 @@
 const { threshold } = require('../../config.json');
 const { stringSimilarity } = require('string-similarity-js');
-const { EmbedBuilder } = require('discord.js');
+const { BuzzEmbed, PlayerLeaderboardEmbed, ResultEmbed, QuestionEmbed, TeamLeaderboardEmbed } = require('../helpers/embeds.js');
 
 // Starts the game passed through.
 async function playGame(channel, teamInfo, players, losePoints, set, questions) {
@@ -24,13 +24,13 @@ async function playGame(channel, teamInfo, players, losePoints, set, questions) 
 			}
 			case 'teamlb': {
 				channel.send({
-					embeds: [generateTeamEmbed(teamInfo)]
+					embeds: [TeamLeaderboardEmbed(teamInfo)]
 				});
 				break;
 			}
 			case 'playerlb': {
 				channel.send({
-					embeds: [generatePlayerEmbed(players)]
+					embeds: [PlayerLeaderboardEmbed(players)]
 				});
 				break;
 			}
@@ -39,7 +39,7 @@ async function playGame(channel, teamInfo, players, losePoints, set, questions) 
 
 	while (questions.length && !ended) {
 		const nextQuestion = questions.shift();
-		const questionEmbed = generateQuestionEmbed(set, questionNumber, nextQuestion);
+		const questionEmbed = QuestionEmbed(set, questionNumber, nextQuestion);
 		const msg = await channel.send({
 			embeds: [questionEmbed]
 		});
@@ -64,7 +64,7 @@ async function playGame(channel, teamInfo, players, losePoints, set, questions) 
 			});
 
 			await channel.send({
-				embeds: [generateBuzzEmbed(answerer.username, answerTeam, msg.client, numAnswers)]
+				embeds: [BuzzEmbed(answerer.username, answerTeam, msg.client, numAnswers)]
 			});
 
 			try {
@@ -79,7 +79,7 @@ async function playGame(channel, teamInfo, players, losePoints, set, questions) 
 					players.get(answerer.id).score++;
 					teamInfo.get(answerTeam).score++;
 					await channel.send({
-						embeds: [generateResultEmbed('correct', nextQuestion, losePoints, answerer.username, ans)]
+						embeds: [ResultEmbed('correct', nextQuestion, losePoints, answerer.username, ans)]
 					});
 				} else {
 					if (losePoints) {
@@ -87,7 +87,7 @@ async function playGame(channel, teamInfo, players, losePoints, set, questions) 
 						teamInfo.get(answerTeam).score--;
 					}
 					await channel.send({
-						embeds: [generateResultEmbed('incorrect', nextQuestion, losePoints, answerer.username, ans)]
+						embeds: [ResultEmbed('incorrect', nextQuestion, losePoints, answerer.username, ans)]
 					});
 				}
 			} catch (time) {
@@ -96,12 +96,12 @@ async function playGame(channel, teamInfo, players, losePoints, set, questions) 
 					teamInfo.get(answerTeam).score--;
 				}
 				await channel.send({
-					embeds: [generateResultEmbed('time', nextQuestion, losePoints, answerer.username)]
+					embeds: [ResultEmbed('time', nextQuestion, losePoints, answerer.username)]
 				});
 			}
 		} catch (nobuzz) {
 			await channel.send({
-				embeds: [generateResultEmbed('nobuzz', nextQuestion, losePoints, null, null)]
+				embeds: [ResultEmbed('nobuzz', nextQuestion, losePoints, null, null)]
 			});
 		}
 
@@ -115,120 +115,13 @@ async function playGame(channel, teamInfo, players, losePoints, set, questions) 
 
 	channel.send({
 		content: '## Game Ended! Final Standings:',
-		embeds: [generateTeamEmbed(teamInfo), generatePlayerEmbed(players)]
+		embeds: [TeamLeaderboardEmbed(teamInfo), PlayerLeaderboardEmbed(players)]
 	});
 
 	function endGame() {
 		ended = true;
 		commandCollector.stop();
 	}
-}
-
-/* %%%%%%%%%%%%%%%%
- * EMBED GENERATORS
- * %%%%%%%%%%%%%%%%
- * TODO: Maybe move all embeds across the bot to a single embed file.
-*/
-function generateTeamEmbed(teamInfo) {
-	const msg = new EmbedBuilder()
-		.setColor(0xD1576D)
-		.setTitle('🏆 Team Standings 🏆');
-
-	let description = '';
-	const sorted = new Map([...(teamInfo.entries())].sort((a, b) => b[1].score - a[1].score));
-	for (const [_, info] of sorted) {
-		description += `\`${info.score} points\` - ${info.name}\n`;
-	}
-
-	return msg.setDescription(description);
-}
-
-function generatePlayerEmbed(players) {
-	const msg = new EmbedBuilder()
-		.setColor(0xD1576D)
-		.setTitle('🏆 Player Standings 🏆');
-
-	let description = '';
-	const sorted = new Map([...(players.entries())].sort((a, b) => b[1].score - a[1].score));
-	for (const [_, info] of sorted) {
-		description += `\`${info.score} points\` - ${info.name}\n`;
-	}
-	return msg.setDescription(description);
-}
-
-function generateQuestionEmbed(set, num, question) {
-	const msg = new EmbedBuilder()
-		.setColor(0xD1576D)
-		.setTitle(`❔ ${set} ※ Question ${num} ❔`)
-		.setDescription(`${question.multi > 1 ? 'This is a ' + question.multi + ' part question. ' : ''}${question?.question ?? '_ _'}`);
-
-	if (question.img) {
-		msg.setImage(question.img);
-	}
-
-	return msg;
-}
-
-function generateBuzzEmbed(playerName, team, client, numAnswers) {
-	const emoji = client.emojis.cache.get(team);
-	const msg = new EmbedBuilder()
-		.setColor(0xD1576D)
-		.setTitle(`${emoji} ${playerName} has buzzed in! ${emoji}`)
-		.setDescription(`You have ${10 * numAnswers} seconds to answer!`);
-
-	return msg;
-}
-
-function generateResultEmbed(correct, question, losePoints, answerer, response) {
-	let emoji, message, description;
-	switch (correct) {
-		case 'correct': {
-			emoji = '✅';
-			message = 'Correct!';
-			description = `${answerer} has just scored themselves and their team 1 point!`;
-			break;
-		}
-		case 'incorrect': {
-			emoji = '❌';
-			message = 'Incorrect';
-			description = losePoints ? `${answerer} has just lost their team 1 point!` : `Unfortunately, ${answerer} did not answer correctly!`;
-			break;
-		}
-		case 'time': {
-			emoji = '⏱️';
-			message = 'Time\'s Up!';
-			description = losePoints ? `${answerer} has just lost their team 1 point!` : `Unfortunately, ${answerer} did not answer correctly!`;
-			break;
-		}
-		case 'nobuzz': {
-			emoji = '😭';
-			message = 'No takers?';
-			description = 'Cold feet, eh? No change in the standings.';
-			break;
-		}
-	}
-	const msg = new EmbedBuilder()
-		.setColor(0xD1576D)
-		.setTitle(`${emoji} ${message} ${emoji}`)
-		.setDescription(description)
-		.setFields(
-			{
-				name: 'Question',
-				value: question.question
-			},
-			{
-				name: 'Answer',
-				value: question.answer.join(', ')
-			});
-
-	if (response != null) {
-		msg.addFields({
-			name: 'Player Response',
-			value: [...response.values()].join(', ')
-		});
-	}
-
-	return msg;
 }
 
 // Judges the answers for correctness using string similarity.

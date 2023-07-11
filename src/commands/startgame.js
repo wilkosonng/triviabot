@@ -1,9 +1,10 @@
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder } = require('discord.js');
 const { teams, teamEmojis } = require('../../config.json');
 const { initializeApp } = require('firebase/app');
 const { getDatabase, ref, get } = require('firebase/database');
 const { playGame } = require('../game/playgame');
 const { stringSimilarity } = require('string-similarity-js');
+const { StartEmbed } = require('../helpers/embeds.js');
 require('dotenv').config();
 
 const firebaseApp = initializeApp(JSON.parse(process.env.FIREBASE_CREDS));
@@ -125,7 +126,7 @@ module.exports = {
 		try {
 			// Ah yes, socket timeout.
 			await channel.send({
-				embeds: [generateStartEmbed()]
+				embeds: [StartEmbed(set, description, numTeams, teamInfo)]
 			})
 				.then(async (msg) => {
 					for (let i = 0; i < numTeams; i++) {
@@ -157,7 +158,7 @@ module.exports = {
 							players.delete(player);
 							msg.edit(
 								{
-									embeds: [generateStartEmbed()]
+									embeds: [StartEmbed(set, description, numTeams, teamInfo)]
 								}
 							);
 							return;
@@ -172,7 +173,7 @@ module.exports = {
 
 						msg.edit(
 							{
-								embeds: [generateStartEmbed()]
+								embeds: [StartEmbed(set, description, numTeams, teamInfo)]
 							}
 						);
 					});
@@ -230,30 +231,6 @@ module.exports = {
 			}
 			endGame();
 		});
-
-		function generateStartEmbed() {
-			const msg = new EmbedBuilder()
-				.setColor(0xD1576D)
-				.setTitle(`🧠 ${set} ※ React to join! 🧠`)
-				.setDescription(description)
-				.setTimestamp();
-
-			for (let i = 0; i < numTeams; i++) {
-				let teamPlayers = '';
-
-				teamInfo.get(teamEmojis[i]).players.forEach((e) => {
-					teamPlayers += `<@${e}>\n`;
-				});
-
-				msg.addFields(
-					{
-						name: teams[i],
-						value: teamPlayers === '' ? 'None' : teamPlayers
-					}
-				);
-			}
-			return msg;
-		}
 
 		// Thanos time
 		function endGame() {

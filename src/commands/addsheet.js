@@ -1,8 +1,9 @@
-const { SlashCommandBuilder, EmbedBuilder, bold, underscore } = require('discord.js');
+const { SlashCommandBuilder } = require('discord.js');
 const validator = require('validator');
 const sheets = require('google-spreadsheet');
 const { initializeApp } = require('firebase/app');
 const { getDatabase, ref, set, get, remove } = require('firebase/database');
+const { AddSummaryEmbed } = require('../helpers/embeds.js');
 require('dotenv').config();
 
 const sheetsRegex = /docs\.google\.com\/spreadsheets\/d\/(?<id>[\w-]+)\//;
@@ -44,7 +45,6 @@ module.exports = {
 		let titleExists = false;
 
 		// Returns if the title is invalid.
-
 		if (!sentenceRegex.test(title) || title.length > 60) {
 			return interaction.editReply({
 				content: 'Invalid title. Please keep titles at most 60 characters with alphanumeric with punctuation and normal spacing!',
@@ -52,7 +52,6 @@ module.exports = {
 		}
 
 		// Returns if the description is invalid.
-
 		if (!sentenceRegex.test(description) || description.length > 300) {
 			return interaction.editReply({
 				content: 'Invalid description. Please make sure you are using normal spacing and the description is at most 300 characters!}',
@@ -60,7 +59,6 @@ module.exports = {
 		}
 
 		// Returns if the URL is invalid.
-
 		if (!validator.isURL(url)) {
 			return interaction.editReply({
 				content: 'Invalid URL. Please check to make sure you submitted a valid URL!',
@@ -70,7 +68,6 @@ module.exports = {
 		const match = url.match(sheetsRegex);
 
 		// Asserts the URL is properly-formatted such that the spreadsheet ID is extractable.
-
 		if (match?.groups?.id == null) {
 			return interaction.editReply({
 				content: 'Cannot find Spreadsheet ID from URL. Make sure your URL is a valid Google Sheets URL!',
@@ -78,7 +75,6 @@ module.exports = {
 		}
 
 		// Checks if title is already taken.
-
 		try {
 			await get(ref(database, `questionSets/${title}/owner`)).then((snapshot) => {
 				if (snapshot.exists()) {
@@ -98,7 +94,6 @@ module.exports = {
 		}
 
 		// Attempts to access the spreadsheet.
-
 		const doc = new sheets.GoogleSpreadsheet(match.groups.id);
 		try {
 			await doc.useServiceAccountAuth(JSON.parse(process.env.GOOGLE_CREDS));
@@ -110,7 +105,6 @@ module.exports = {
 		}
 
 		// Attempts to load the info from the spreadsheet.
-
 		try {
 			await doc.loadInfo();
 		} catch (error) {
@@ -124,7 +118,6 @@ module.exports = {
 		let success = false;
 
 		// Attempts to load and process the spreadsheet rows.
-
 		try {
 			const rows = await sheet.getRows();
 
@@ -152,7 +145,6 @@ module.exports = {
 				}
 
 				// Asserts the question is properly-formatted.
-
 				if (questionMatch.groups.question == null) {
 					return interaction.editReply({
 						content: `Failed to add question at row ${row.rowIndex}: invalid question.`,
@@ -160,7 +152,6 @@ module.exports = {
 				}
 
 				// Asserts an answer exists.
-
 				if (raw.length < 2) {
 					return interaction.editReply({
 						content: `Failed to add question ${question}: no answer pair found.`,
@@ -168,7 +159,6 @@ module.exports = {
 				}
 
 				// If an answer exists, add the question and answer pair to the question set.
-
 				questionSet.push({
 					question: questionMatch.groups.question,
 					answer: raw.slice(1),
@@ -184,7 +174,6 @@ module.exports = {
 		}
 
 		// Attempts to add the trivia to the database.
-
 		await set(ref(database, `questionSets/${title}`), {
 			description: description,
 			owner: user.id,
@@ -215,20 +204,7 @@ module.exports = {
 
 		// Constructs an embed summary.
 		try {
-			const summary = new EmbedBuilder()
-				.setColor(0xD1576D)
-				.setTitle(title)
-				.setDescription(description)
-				.setAuthor({
-					name: interaction.member.displayName,
-					iconURL: interaction.member.displayAvatarURL(),
-				})
-				.setFields(
-					{ name: bold(underscore('Questions Added')), value: questionSet.length.toString() },
-					{ name: bold(underscore('First Question')), value: questionSet[0].question },
-					{ name: bold(underscore('Last Question')), value: questionSet[questionSet.length - 1].question },
-				)
-				.setTimestamp();
+			const summary = AddSummaryEmbed(title, description, interaction.member, questionSet);
 
 			interaction.channel.send({
 				embeds: [summary],

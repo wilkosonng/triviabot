@@ -1,5 +1,6 @@
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder } = require('discord.js');
 const { stringSimilarity } = require('string-similarity-js');
+const { ListEmbed } = require('../helpers/embeds.js');
 
 module.exports = {
 	data: new SlashCommandBuilder()
@@ -20,7 +21,7 @@ module.exports = {
 		const keyword = interaction.options.getString('name');
 
 		if (keyword) {
-			sets = sets.filter((ans) => stringSimilarity(ans[0], keyword) > 5);
+			sets = sets.filter((ans) => stringSimilarity(ans[0], keyword) > 0.5);
 		}
 
 		if (!sets.length) {
@@ -33,25 +34,7 @@ module.exports = {
 		const page = Math.min(interaction.options.getInteger('page') ?? 1, maxPage);
 
 		return interaction.reply({
-			embeds: [generateListEmbed(page, maxPage, keyword, sets)]
+			embeds: [ListEmbed(page, maxPage, keyword, sets)]
 		});
 	}
 };
-
-function generateListEmbed(page, maxPage, keyword, questions) {
-	const leftIndex = 10 * (page - 1);
-	const rightIndex = Math.min(10 * page, questions.length);
-	const slice = questions.slice(leftIndex, rightIndex);
-	let description = keyword ? `Filtered by ${keyword}\n\n` : '';
-
-	for ([title, info] of slice) {
-		description += `\`${title}\` - <@${info.owner}>\n`;
-	}
-
-	return new EmbedBuilder()
-		.setColor(0xD1576D)
-		.setTitle(`Page ${page} of ${maxPage}`)
-		.setDescription(description)
-		.setFooter({ text: `Questions ${leftIndex + 1} to ${rightIndex}` });
-
-}

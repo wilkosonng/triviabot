@@ -1,8 +1,9 @@
-const { SlashCommandBuilder, EmbedBuilder, bold, underscore } = require('discord.js');
+const { SlashCommandBuilder } = require('discord.js');
 const validator = require('validator');
 const puppeteer = require('puppeteer-extra');
 const { initializeApp } = require('firebase/app');
 const { getDatabase, ref, set, get, remove } = require('firebase/database');
+const { AddSummaryEmbed } = require('../helpers/embeds.js');
 require('dotenv').config();
 
 const quizletRegex = /quizlet\.com\/(?<id>\d+)\/(?<name>[a-z0-9-]+flash-cards)/;
@@ -55,7 +56,6 @@ module.exports = {
 		let titleExists = false;
 
 		// Returns if the title is invalid.
-
 		if (!sentenceRegex.test(title) || title.length > 60) {
 			return interaction.editReply({
 				content: 'Invalid title. Please keep titles at most 60 characters with alphanumeric with punctuation and normal spacing!',
@@ -63,7 +63,6 @@ module.exports = {
 		}
 
 		// Returns if the description is invalid.
-
 		if (!sentenceRegex.test(description) || description.length > 300) {
 			return interaction.editReply({
 				content: 'Invalid description. Please make sure you are using normal spacing and the description is at most 300 characters!}',
@@ -71,7 +70,6 @@ module.exports = {
 		}
 
 		// Returns if the URL is invalid.
-
 		if (!validator.isURL(url)) {
 			return interaction.editReply({
 				content: 'Invalid URL. Please check to make sure you submitted a valid URL!',
@@ -79,7 +77,6 @@ module.exports = {
 		}
 
 		// Checks if title is already taken.
-
 		try {
 			await get(ref(database, `questionSets/${title}/owner`)).then((snapshot) => {
 				if (snapshot.exists()) {
@@ -101,7 +98,6 @@ module.exports = {
 		const match = url.match(quizletRegex);
 
 		// Asserts the URL is properly-formatted such that the ID and name are extractable.
-
 		if (match?.groups?.id == null || match.groups.name == null) {
 			return interaction.editReply({
 				content: 'Unable to find the set ID and title from the URL. Please make sure your URL is valid!',
@@ -124,7 +120,6 @@ module.exports = {
 		}
 
 		// Attempts to add the trivia to the database.
-
 		let success = false;
 
 		await set(ref(database, `questionSets/${title}`), {
@@ -157,20 +152,7 @@ module.exports = {
 
 		// Constructs an embed summary.
 		try {
-			const summary = new EmbedBuilder()
-				.setColor(0xD1576D)
-				.setTitle(title)
-				.setDescription(description)
-				.setAuthor({
-					name: interaction.member.displayName,
-					iconURL: interaction.member.displayAvatarURL(),
-				})
-				.setFields(
-					{ name: bold(underscore('Questions Added')), value: questionSet.length.toString() },
-					{ name: bold(underscore('First Question')), value: questionSet[0].question },
-					{ name: bold(underscore('Last Question')), value: questionSet[questionSet.length - 1].question },
-				)
-				.setTimestamp();
+			const summary = new AddSummaryEmbed(title, description, interaction.member, questionSet);
 
 			interaction.channel.send({
 				embeds: [summary],
