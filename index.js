@@ -18,6 +18,7 @@ const client = new Client({
 		GatewayIntentBits.Guilds,
 		GatewayIntentBits.GuildMessages,
 		GatewayIntentBits.GuildMessageReactions,
+		GatewayIntentBits.GuildVoiceStates,
 		GatewayIntentBits.MessageContent,
 	],
 	disableEveryone: true,
@@ -52,6 +53,7 @@ client.once(Events.ClientReady, async clientObject => {
 		console.log(Object.keys(sets));
 	});
 
+	client.user.setActivity('/info to start!');
 	console.log(`Bot ready to test knowledge! Username: ${clientObject.user.username}.`);
 });
 
