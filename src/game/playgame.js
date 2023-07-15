@@ -17,23 +17,20 @@ async function playGame(channel, teamInfo, players, losePoints, set, questions) 
 	commandCollector.on('collect', (msg => {
 		const command = msg.content.toLowerCase();
 		switch (command) {
-			case 'endtrivia': {
+			case 'endtrivia':
 				msg.reply('Game ending after next question!');
 				endGame();
 				break;
-			}
-			case 'teamlb': {
+			case 'teamlb':
 				channel.send({
 					embeds: [TeamLeaderboardEmbed(teamInfo)]
 				});
 				break;
-			}
-			case 'playerlb': {
+			case 'playerlb':
 				channel.send({
 					embeds: [PlayerLeaderboardEmbed(players)]
 				});
 				break;
-			}
 		}
 	}));
 

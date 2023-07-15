@@ -151,10 +151,12 @@ module.exports = {
 					});
 				}
 
-				// Asserts an answer exists.
-				if (raw.length < 2) {
+				const ansNum = questionMatch.groups.ansnum ? parseInt(questionMatch.groups.ansnum) : 1;
+
+				// Asserts sufficient answers exists.
+				if (raw.length < ansNum + 1) {
 					return interaction.editReply({
-						content: `Failed to add question ${question}: no answer pair found.`,
+						content: `Failed to add question ${question}: not enough answers exist.`,
 					});
 				}
 
