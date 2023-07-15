@@ -4,7 +4,7 @@ const { ListEmbed } = require('../helpers/embeds.js');
 
 module.exports = {
 	data: new SlashCommandBuilder()
-		.setName('listquestions')
+		.setName('listsets')
 		.setDescription('Lists a page of available trivia sets')
 		.addIntegerOption(option =>
 			option
@@ -14,14 +14,14 @@ module.exports = {
 				.setRequired(false))
 		.addStringOption(option =>
 			option
-				.setName('name')
+				.setName('title')
 				.setDescription('Search for specific sets via their name.')
 				.setRequired(false)),
 	async execute(interaction, sets) {
-		const keyword = interaction.options.getString('name');
+		const keyword = interaction.options.getString('name')?.toLowerCase();
 
 		if (keyword) {
-			sets = sets.filter((ans) => stringSimilarity(ans[0], keyword) > 0.5);
+			sets = sets.filter((set) => stringSimilarity(set[0], keyword) > 0.5 || set[0].toLowerCase().includes(keyword));
 		}
 
 		if (!sets.length) {

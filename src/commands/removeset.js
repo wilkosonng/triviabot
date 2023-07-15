@@ -9,7 +9,7 @@ const database = getDatabase(firebaseApp);
 
 module.exports = {
 	data: new SlashCommandBuilder()
-		.setName('removequestion')
+		.setName('removeset')
 		.setDescription('Removes a question set to the topic pool (requires admin or owner)')
 		.addStringOption(option =>
 			option

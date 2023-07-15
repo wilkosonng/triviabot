@@ -11,16 +11,16 @@ Additional information can be obtained using the `/info` command.
 
 - `/addquizlet` - Adds a question set from a Quizlet URL.
 - `/addsheet` - Adds a question set from a public Google Sheets URL.
-- `/removequestion` - Removes a question set of the given name.
+- `/removeset` - Removes a question set of the given name.
 
 ### Question Set Management
 
-- `/listquestions` - Lists up to 10 question sets that match the given query.
-- `/questioninfo` - Provides information and data on the given question set.
+- `/listsets` - Lists up to 10 question sets that match the given query.
+- `/setinfo` - Provides information and data on the given question set.
 
 ### Playing Trivia
 
-- `/start` - Starts a text channel-based game.
+- `/startgame` - Starts a text channel-based game.
   - Once a game has started, use `ready`, `buzz`, and `endtrivia` commands to control the game flow. Use `playerlb` and `teamlb` to view the current scores.
 
 

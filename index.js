@@ -73,10 +73,16 @@ client.on(Events.InteractionCreate, async interaction => {
 		}
 
 		try {
-			if (commandName === 'listquestions') {
-				return await command.execute(interaction, Object.entries(sets));
+			switch (commandName) {
+				case 'listquestions':
+					await command.execute(interaction, Object.entries(sets));
+					break;
+				case 'info':
+					await command.execute(interaction, Array.from(client.commands.keys()));
+					break;
+				default:
+					await command.execute(interaction);
 			}
-			await command.execute(interaction);
 		} catch (error) {
 			console.error(error);
 			interaction.channel.send('Oopsies, something went wrong! Please contact the bot developer.');
@@ -98,6 +104,9 @@ client.on(Events.InteractionCreate, async interaction => {
 	}
 
 	try {
+		if (interaction.commandName === 'info') {
+			return await command.autocomplete(interaction, Array.from(client.commands.keys()));
+		}
 		await command.autocomplete(interaction, Object.keys(sets));
 	} catch (error) {
 		console.error(error);

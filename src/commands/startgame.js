@@ -13,7 +13,7 @@ const currGames = new Set();
 
 module.exports = {
 	data: new SlashCommandBuilder()
-		.setName('start')
+		.setName('startgame')
 		.setDescription('Starts a game of trivia in the current channel.')
 		.addStringOption(option =>
 			option
@@ -195,7 +195,7 @@ module.exports = {
 		startCollector.on('collect', async (msg) => {
 			const lowercaseMsg = msg.content.toLowerCase();
 			switch (lowercaseMsg) {
-				case 'ready': {
+				case 'ready':
 					if (players.size) {
 						startCollector.stop();
 						reactionCollector.stop();
@@ -206,28 +206,23 @@ module.exports = {
 						channel.send('Need at least one player to start!');
 					}
 					break;
-				};
-				case 'endtrivia': {
+				case 'endtrivia':
 					endGame();
 					msg.reply('Game ended');
 					break;
-				};
 			}
 		});
 
 		startCollector.on('end', (_, reason) => {
 			switch (reason) {
-				case 'time': {
+				case 'time':
 					channel.send('Game timed out');
 					break;
-				}
-				case 'user': {
+				case 'user':
 					return;
-				}
-				default: {
+				default:
 					channel.send('Oops, something went wrong!');
 					break;
-				}
 			}
 			endGame();
 		});
