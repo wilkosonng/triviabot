@@ -1,0 +1,112 @@
+{
+  "general": {
+    "description": "Welcome to the trivia bot! This is a open-source Discord bot designed to allow users to upload and play trivia question sets right inside Discord! Below is a quickstart guide that should cover the basics. If you need more information on a particular command, use `y/info command:<command_name>` to pull up more detailed information.\n\n### Creating new trivia sets.\nCurrently, the bot supports importing trivia sets from Google Sheets using the `/addsheet` command and Quizlet using the `/addquizlet` command. For Google Sheets, you'll need to format the sheet correctly. The info page on the `/addsheet` command should provide you with instructions and a template.\n\n### Removing Question Sets\nRemove a question set using the `/removeset` command. Note that you must either be a server administrator the owner of the question set in order to successfully remove a set.\n\n### Looking Up Question Sets\nThe discord bot provides you two ways to look up uploaded question sets. First, the `/listquestions` command will list out up to 10 question sets and their authors that match your search. For more detailed information on a question set, use `/questioninfo name:<set_name>` (this is case-sensitive).\n\n### Playing Trivia\nTo start a text-channel game of trivia, use the `/start` command. You have many customizable parameters including the question set to play, the number of teams, and whether or not you lose points. More is soon to come!\n\nAnd with that, you should be good to go! If you still have questions, once again, you can run the `/info` command on other commands for more detailed information.",
+    "fields": []
+  },
+
+  "addquizlet": {
+    "description": "Add a question set from Quizlet, given a valid quizlet URL of the form `https://quizlet.com/<id>/<name>`.\n**NOTE** - Questions are by default assigned to the `term` (front) and answers are assigned to the `definition` (back) of the flashcard. To flip, use the `flip` parameter.\n",
+    "fields": [
+      {
+        "name": "Title `(required)` -",
+        "value": "The name you wish to give to the question set. This must be unused in the current list of question sets and unique to the new set."
+      },
+      {
+        "name": "Description `(required)` -",
+        "value": "The description to add to the question set. This should provide a meaningful summary of what the question set tests as well as specific instructions in how to answer each question."
+      },
+      {
+        "name": "URL `(required)` ",
+        "value": "The URL associated with the Quizlet question set you wish to add."
+      },
+      {
+        "name": "Flip `(optional)` -",
+        "value": "Whether you wish to flip how the question set treats the fronts/backs of flashcards as questions or answers (default - false: questions are the front, answers are the back)."
+      }
+    ]
+  },
+
+  "addsheet": {
+    "description": "Add a question set from Google Sheets, given a valid Quizlet URL of the form `https://docs.google.com/spreadsheets/<id>`.\n\n**IMPORTANT** - For formatting, leave the first row blank. Questions are treated as the first column of each row and answers for each question are scanned on separate columns for the rest of the row.\n- To accept multiple answers, put each answer in a separate column on the question's row.\n- To ask a multi-part question, use `!!<number>` before your question.\n- To include an image in your question, use `!!img[URL]` before your question (must come after the number tag if both are included).\nFor example, `!!2!!img[https://bolivia.png]What is the capital of Bolivia?`. For a template, see https://tinyurl.com/triviabotsheets.",
+    "fields": [
+      {
+        "name": "Title `(required)` -",
+        "value": "The name you wish to give to the question set. This must be unused in the current list of question sets and unique to the new set."
+      },
+      {
+        "name": "Description `(required)` -",
+        "value": "The description to add to the question set. This should provide a meaningful summary of what the question set tests as well as specific instructions in how to answer each question."
+      },
+      {
+        "name": "URL `(required)` -",
+        "value": "The URL associated with the Google Sheets question set you wish to add."
+      }
+    ]
+  },
+
+  "info": {
+    "description": "The `/info` command provides with useful info about the bot and commands such as the `/info` command that provides you with useful info about the bot and commands such as the `/info` command that provides you with useful info about the bot and commands such as the `/info` command...",
+    "fields": [
+      {
+        "name": "Command `(optional)` -",
+        "value": "The command you wish to learn more about. If left blank, provides you with general information about the bot."
+      }
+    ]
+  },
+
+  "listsets": {
+    "description": "Provides a page of up to 10 question set name-owner pairs to play. If a query is given, provides up to 10 question set name-owner pairs matching the query.",
+    "fields": [
+      {
+        "name": "Page `(optional)` -",
+        "value": "The page of the list you wish to start at. If left blank, starts at page 1."
+      },
+      {
+        "name": "Title `(optional)` -",
+        "value": "The name you wish to filter by (i.e. 'Capitals'). Only question sets that have a similar name or contain this option will be displayed. If left blank, shows all question sets."
+      }
+    ]
+  },
+
+  "setinfo": {
+    "description": "Provides more detailed metadata about a question set.",
+    "fields": [
+      {
+        "name": "Title `(required)` -",
+        "value": "The name of the question set you wish to request data for."
+      }
+    ]
+  },
+
+  "removeset": {
+    "description": "Removes a question set from the question pool.\n**NOTE** - You must either be a server administrator or the owner of the question set in order to do so. You will receive an error otherwise.",
+    "fields": [
+      {
+        "name": "Title `(required)` -",
+        "value": "The name of the question set you wish to remove."
+      }
+    ]
+  },
+
+  "startgame": {
+    "description": "Starts a game of trivia given the parameters. Only one game may be active per channel at a time.",
+    "fields": [
+      {
+        "name": "Question Set `(optional)` -",
+        "value": "The name of the question set you wish to play. If left blank, chooses a random question set for you. If no matches are found, errors instead."
+      },
+      {
+        "name": "Shuffle `(optional)` -",
+        "value": "Whether or not to shuffle the questions from the original order in the question set. If left blank, shuffles the questions."
+      },
+      {
+        "name": "teams `(optional)` -",
+        "value": "The number of teams you wish to play the game. If left blank, only 1 team is permitted. The number of teams supported are between 1-4 (inclusive)."
+      },
+      {
+        "name": "Lose Points `(optional)` -",
+        "value": "Whether or not incorrect answers or timing out of an answer loses points in the game. If left blank, incorrect and answer time outs will lose points."
+      }
+    ]
+  }
+}

@@ -1,4 +1,4 @@
-const { Client, Member, EmbedBuilder, bold, underscore, userMention } = require('discord.js');
+const { Client, Member, EmbedBuilder, bold, underscore, inlineCode, heading, userMention } = require('discord.js');
 const { embedColor, teams, teamEmojis } = require('../../config.json');
 const info = require('./info.json');
 
@@ -49,30 +49,60 @@ function BuzzEmbed(playerName, team, client, numAnswers) {
 }
 
 /**
+ * Generates an embed that provides information about the game or a specific command.
+ *
+ * @param {string} command The command to provide info on. If undefined, provides general information.
+ *
+ * @return {EmbedBuilder} The embed to be displayed.
+*/
+function InfoEmbed(command) {
+	const title = command ? inlineCode(`/${command}`) : bold('General Information');
+	const commandInfo = command ? info[command] : info['general'];
+
+	/* Command Info structure:
+	 * {
+	 *	 description: "...",
+	 *   fields: [
+	 * 		{
+	 * 			name: "...",
+	 * 			value: "..."
+	 * 		}
+	 * 		, ...
+	 *   ]
+	 * }
+	*/
+	return new EmbedBuilder()
+		.setColor(embedColor)
+		.setTitle(title)
+		.setDescription(commandInfo['description'])
+		.addFields(commandInfo['fields']);
+}
+
+/**
  * Generates an embed listing question sets that match the query.
  *
  * @param {number} page The page of the query requested.
  * @param {number} maxPage The highest page of the query.
  * @param {string} keyword The string query the user submitted.
- * @param {Array} questions The list of questions.
+ * @param {Array} questionSets The list of question sets of the query.
  *
  * @return {EmbedBuilder} The embed to be displayed.
 */
-function ListEmbed(page, maxPage, keyword, questions) {
+function ListEmbed(page, maxPage, keyword, questionSets) {
 	const leftIndex = 10 * (page - 1);
-	const rightIndex = Math.min(10 * page, questions.length);
-	const slice = questions.slice(leftIndex, rightIndex);
-	let description = keyword ? `Filtered by ${keyword}\n\n` : '';
+	const rightIndex = Math.min(10 * page, questionSets.length);
+	const slice = questionSets.slice(leftIndex, rightIndex);
+	let description = keyword ? underscore(`Matching query ${bold(keyword)}\n`) : '';
 
-	for ([title, info] of slice) {
-		description += `\`${title}\` - <@${info.owner}>\n`;
+	for (const [title, metadata] of slice) {
+		description += `${inlineCode(title)} - <@${metadata.owner}>\n`;
 	}
 
 	return new EmbedBuilder()
 		.setColor(embedColor)
 		.setTitle(`Page ${page} of ${maxPage}`)
 		.setDescription(description)
-		.setFooter({ text: `Questions ${leftIndex + 1} to ${rightIndex}` });
+		.setFooter({ text: `Question Sets ${leftIndex + 1} to ${rightIndex}` });
 
 }
 
@@ -91,7 +121,7 @@ function PlayerLeaderboardEmbed(players) {
 	let description = '';
 	const sorted = new Map([...(players.entries())].sort((a, b) => b[1].score - a[1].score));
 	sorted.forEach((player) => {
-		description += `\`${player.score} points\` - ${player.name}\n`;
+		description += `${inlineCode(`${player.score} points`)} - ${player.name}\n`;
 	});
 	return msg.setDescription(description);
 }
@@ -251,13 +281,13 @@ function TeamLeaderboardEmbed(teamInfo) {
 	let description = '';
 	const sorted = new Map([...(teamInfo.entries())].sort((a, b) => b[1].score - a[1].score));
 	sorted.forEach((team) => {
-		description += `\`${team.score} points\` - ${team.name}\n`;
+		description += `${inlineCode(`${team.score} points`)} - ${team.name}\n`;
 	});
 
 	return msg.setDescription(description);
 }
 
 module.exports = {
-	AddSummaryEmbed, BuzzEmbed, ListEmbed, PlayerLeaderboardEmbed, ResultEmbed,
+	AddSummaryEmbed, BuzzEmbed, InfoEmbed, ListEmbed, PlayerLeaderboardEmbed, ResultEmbed,
 	QuestionEmbed, QuestionInfoEmbed, StartEmbed, TeamLeaderboardEmbed
 };
