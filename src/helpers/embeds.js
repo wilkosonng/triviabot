@@ -139,7 +139,7 @@ function QuestionEmbed(questionSet, num, question) {
 	const msg = new EmbedBuilder()
 		.setColor(embedColor)
 		.setTitle(`❔ ${questionSet} ※ Question ${num} ❔`)
-		.setDescription(`${question.multi > 1 ? 'This is a ' + question.multi + ' part question. ' : ''}${question?.question ?? '_ _'}`);
+		.setDescription(question?.question ?? '_ _');
 
 	if (question.img) {
 		msg.setImage(question.img);

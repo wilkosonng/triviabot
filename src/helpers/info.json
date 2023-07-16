@@ -4,8 +4,13 @@
     "fields": []
   },
 
+  "adddoc": {
+    "description": "WIP",
+    "fields": []
+  },
+
   "addquizlet": {
-    "description": "Add a question set from Quizlet, given a valid quizlet URL of the form `https://quizlet.com/<id>/<name>`.\n**NOTE** - Questions are by default assigned to the `term` (front) and answers are assigned to the `definition` (back) of the flashcard. To flip, use the `flip` parameter.\n",
+    "description": "Add a question set from Quizlet, given a valid quizlet URL of the form `https://quizlet.com/<id>/<name>`.\n**NOTE** - Questions are by default assigned to the `term` (front) and answers are assigned to the `definition` (back) of the flashcard. To flip, use the `flip` parameter. Images are currently not supported at this time.\n",
     "fields": [
       {
         "name": "Title `(required)` -",
@@ -27,7 +32,7 @@
   },
 
   "addsheet": {
-    "description": "Add a question set from Google Sheets, given a valid Quizlet URL of the form `https://docs.google.com/spreadsheets/<id>`.\n\n**IMPORTANT** - For formatting, leave the first row blank. Questions are treated as the first column of each row and answers for each question are scanned on separate columns for the rest of the row.\n- To accept multiple answers, put each answer in a separate column on the question's row.\n- To ask a multi-part question, use `!!<number>` before your question.\n- To include an image in your question, use `!!img[URL]` before your question (must come after the number tag if both are included).\nFor example, `!!2!!img[https://bolivia.png]What is the capital of Bolivia?`. For a template, see https://tinyurl.com/triviabotsheets.",
+    "description": "Add a question set from Google Sheets, given a valid Quizlet URL of the form `https://docs.google.com/spreadsheets/<id>`.\n\n**IMPORTANT** - For formatting, leave the first row blank. Questions are treated as the first column of each row and answers for each question are scanned on separate columns for the rest of the row.\n- To accept multiple answers, put each answer in a separate column on the question's row.\n- To ask a multi-part question, use `This is a # part question. ` before your question. Note that this is case and punctuation sensitive.\n- To include an image in your question, use `!!img[URL]` before your question.\nFor example, `!!img[https://bolivia.png]This is a 2 part question. What is the capital of Bolivia?`. For a template, see https://tinyurl.com/triviabotsheets. For an example, see https://tinyurl.com/triviabotuspres",
     "fields": [
       {
         "name": "Title `(required)` -",
@@ -66,6 +71,11 @@
         "value": "The name you wish to filter by (i.e. 'Capitals'). Only question sets that have a similar name or contain this option will be displayed. If left blank, shows all question sets."
       }
     ]
+  },
+
+  "ping": {
+    "description": "Pings the bot. If successful, the bot should respond with a `Pong!`",
+    "fields": []
   },
 
   "setinfo": {

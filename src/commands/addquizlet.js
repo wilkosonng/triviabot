@@ -7,7 +7,7 @@ const { AddSummaryEmbed } = require('../helpers/embeds.js');
 require('dotenv').config();
 
 const quizletRegex = /quizlet\.com\/(?<id>\d+)\/(?<name>[a-z0-9-]+flash-cards)/;
-const sentenceRegex = /^(\S+ ?)+$/;
+const spaceRegex = /\s+/;
 
 const firebaseApp = initializeApp(JSON.parse(process.env.FIREBASE_CREDS));
 const database = getDatabase(firebaseApp);
@@ -46,8 +46,8 @@ module.exports = {
 	async execute(interaction) {
 		await interaction.deferReply();
 
-		const title = interaction.options.getString('title');
-		const description = interaction.options.getString('description');
+		const title = interaction.options.getString('title').replaceAll(spaceRegex, ' ');
+		const description = interaction.options.getString('description').replaceAll(spaceRegex, ' ');
 		const url = interaction.options.getString('url');
 		const flip = interaction.options.getBoolean('flip') ?? false;
 		const user = interaction.user;
@@ -56,14 +56,14 @@ module.exports = {
 		let titleExists = false;
 
 		// Returns if the title is invalid.
-		if (!sentenceRegex.test(title) || title.length > 60) {
+		if (title.length > 60) {
 			return interaction.editReply({
 				content: 'Invalid title. Please keep titles at most 60 characters with alphanumeric with punctuation and normal spacing!',
 			});
 		}
 
 		// Returns if the description is invalid.
-		if (!sentenceRegex.test(description) || description.length > 300) {
+		if (description.length > 300) {
 			return interaction.editReply({
 				content: 'Invalid description. Please make sure you are using normal spacing and the description is at most 300 characters!}',
 			});
@@ -195,7 +195,13 @@ async function scrapeSet(url, flip) {
 
 		return questions.map((e, i) => ({
 			question: flipQuestions ? answers[i].innerHTML : e.innerHTML,
-			answer: flipQuestions ? [e.innerHTML] : [answers[i].innerHTML],
+			answer: flipQuestions ?
+				[e.innerHTML].map((answer) => (
+					answer.replaceAll(spaceRegex, ' ')
+				)) :
+				[answers[i].innerHTML].map((answer) => (
+					answer.replaceAll(spaceRegex, ' ')
+				)),
 			multi: 1,
 			img: null
 		}));

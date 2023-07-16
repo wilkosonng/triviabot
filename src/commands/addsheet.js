@@ -7,8 +7,8 @@ const { AddSummaryEmbed } = require('../helpers/embeds.js');
 require('dotenv').config();
 
 const sheetsRegex = /docs\.google\.com\/spreadsheets\/d\/(?<id>[\w-]+)\//;
-const sentenceRegex = /^(\S+ ?)+$/;
-const questionRegex = /^(!!(?<ansnum>[2-9]))?(!!img\[(?<img>\S+\.(png|jpg|jpeg|gif|webp))\])?(?<question>(\S+ ?)+)$/;
+const spaceRegex = /\s+/;
+const questionRegex = /^(!!img\[(?<img>\S+\.(png|jpg|jpeg|gif|webp))\])?(?<question>(This is an? (?<ansnum>[2-9]) part question\. )?.+)$/i;
 
 const firebaseApp = initializeApp(JSON.parse(process.env.FIREBASE_CREDS));
 const database = getDatabase(firebaseApp);
@@ -36,8 +36,8 @@ module.exports = {
 	async execute(interaction) {
 		await interaction.deferReply();
 
-		const title = interaction.options.getString('title');
-		const description = interaction.options.getString('description');
+		const title = interaction.options.getString('title').replaceAll(spaceRegex, ' ');
+		const description = interaction.options.getString('description').replaceall(spaceRegex, ' ');
 		const url = interaction.options.getString('url');
 		const user = interaction.user;
 		const questionSet = [];
@@ -45,14 +45,16 @@ module.exports = {
 		let titleExists = false;
 
 		// Returns if the title is invalid.
-		if (!sentenceRegex.test(title) || title.length > 60) {
+		if (title.length > 60) {
 			return interaction.editReply({
 				content: 'Invalid title. Please keep titles at most 60 characters with alphanumeric with punctuation and normal spacing!',
 			});
 		}
 
+		console.log(description);
+
 		// Returns if the description is invalid.
-		if (!sentenceRegex.test(description) || description.length > 300) {
+		if (description.length > 300) {
 			return interaction.editReply({
 				content: 'Invalid description. Please make sure you are using normal spacing and the description is at most 300 characters!}',
 			});
@@ -162,8 +164,10 @@ module.exports = {
 
 				// If an answer exists, add the question and answer pair to the question set.
 				questionSet.push({
-					question: questionMatch.groups.question,
-					answer: raw.slice(1),
+					question: questionMatch.groups.question?.replaceAll(spaceRegex, ' '),
+					answer: raw.slice(1).map((answer) => (
+						answer.replaceAll(spaceRegex, ' ')
+					)),
 					multi: questionMatch.groups.ansnum ? parseInt(questionMatch.groups.ansnum) : 1,
 					img: questionMatch.groups.img ?? null
 				});
