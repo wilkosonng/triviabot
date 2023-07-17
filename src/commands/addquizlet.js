@@ -2,12 +2,12 @@ const { SlashCommandBuilder } = require('discord.js');
 const validator = require('validator');
 const puppeteer = require('puppeteer-extra');
 const { initializeApp } = require('firebase/app');
-const { getDatabase, ref, set, remove } = require('firebase/database');
+const { getDatabase } = require('firebase/database');
 const { AddSummaryEmbed } = require('../helpers/embeds.js');
+const { removeWhiteSpace, uploadSet, deleteSet } = require('../helpers/helpers.js');
 require('dotenv').config();
 
 const quizletRegex = /quizlet\.com\/(?<id>\d+)\/(?<name>[a-z0-9-]+flash-cards)/;
-const spaceRegex = /\s+/g;
 
 const firebaseApp = initializeApp(JSON.parse(process.env.FIREBASE_CREDS));
 const database = getDatabase(firebaseApp);
@@ -46,8 +46,8 @@ module.exports = {
 	async execute(interaction, currSets) {
 		await interaction.deferReply();
 
-		const title = interaction.options.getString('title').replaceAll(spaceRegex, ' ');
-		const description = interaction.options.getString('description').replaceAll(spaceRegex, ' ');
+		const title = removeWhiteSpace(interaction.options.getString('title'));
+		const description = removeWhiteSpace(interaction.options.getString('description'));
 		const url = interaction.options.getString('url');
 		const flip = interaction.options.getBoolean('flip') ?? false;
 		const user = interaction.user;
@@ -107,51 +107,24 @@ module.exports = {
 		}
 
 		// Attempts to add the trivia to the database.
-		let success = false;
-
-		await set(ref(database, `questionSets/${title}`), {
-			description: description,
-			owner: user.id,
-			timestamp: (Date.now() / 1000) | 0,
-		})
-			.then(() => {
-				success = true;
-			})
-			.catch((error) => {
-				console.log(error);
+		if (!(uploadSet(database, questionSet, title, description, user.id))) {
+			// Cleans up if the operation was unsuccessful
+			deleteSet(database, title);
+			return interaction.editReply({
+				content: 'Failure to upload question set.'
 			});
-
-		if (success) {
-			await set(ref(database, `questionLists/${title}`), {
-				questions: questionSet,
-			})
-				.catch(async (error) => {
-					console.error(error);
-
-					// Cleans up if the operation was a half success.
-					await remove(ref(database, `questionSets/${title}`));
-
-					return interaction.editReply({
-						content: 'Upload unsuccessful! :(',
-					});
-				});
 		}
 
 		// Constructs an embed summary.
-		try {
-			const summary = new AddSummaryEmbed(title, description, interaction.member, questionSet);
+		const summary = AddSummaryEmbed(title, description, interaction.member, questionSet);
 
-			interaction.channel.send({
-				embeds: [summary],
-			});
+		interaction.channel.send({
+			embeds: [summary],
+		});
 
-			return interaction.editReply({
-				content: 'Successfully added question set!',
-			});
-		} catch (error) {
-			console.log(error);
-		}
-
+		return interaction.editReply({
+			content: 'Successfully added question set!',
+		});
 	}
 };
 
@@ -172,7 +145,8 @@ async function scrapeSet(url, flip) {
 		await page.click('button[aria-label="See more"]');
 	}
 
-	const data = await page.evaluate((flipQuestions) => {
+	// eslint-disable-next-line no-shadow
+	const data = await page.evaluate((flip, removeWhiteSpace) => {
 		const questions = Array.from(document.querySelectorAll('.SetPageTerm-wordText > .TermText'));
 		const answers = Array.from(document.querySelectorAll('.SetPageTerm-definitionText > .TermText'));
 
@@ -181,18 +155,12 @@ async function scrapeSet(url, flip) {
 		}
 
 		return questions.map((e, i) => ({
-			question: flipQuestions ? answers[i].innerHTML : e.innerHTML,
-			answer: flipQuestions ?
-				[e.innerHTML].map((answer) => (
-					answer.replaceAll(spaceRegex, ' ')
-				)) :
-				[answers[i].innerHTML].map((answer) => (
-					answer.replaceAll(spaceRegex, ' ')
-				)),
+			question: flip ? removeWhiteSpace(answers[i]) : removeWhiteSpace(e.innerHTML),
+			answer: flip ? [removeWhiteSpace(e.innerHTML)] : [removeWhiteSpace(answers[i].innerHTML)],
 			multi: 1,
 			img: null
 		}));
-	}, flip);
+	}, flip, removeWhiteSpace);
 
 	return data;
 }

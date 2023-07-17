@@ -2,12 +2,12 @@ const { SlashCommandBuilder } = require('discord.js');
 const validator = require('validator');
 const sheets = require('google-spreadsheet');
 const { initializeApp } = require('firebase/app');
-const { getDatabase, ref, set, remove } = require('firebase/database');
+const { getDatabase } = require('firebase/database');
 const { AddSummaryEmbed } = require('../helpers/embeds.js');
+const { removeWhiteSpace, uploadSet, deleteSet } = require('../helpers/helpers.js');
 require('dotenv').config();
 
 const sheetsRegex = /docs\.google\.com\/spreadsheets\/d\/(?<id>[\w-]+)\//;
-const spaceRegex = /\s+/g;
 const questionRegex = /^(!!img\[(?<img>\S+\.(png|jpg|jpeg|gif|webp))\])?(?<question>(This is an? (?<ansnum>[2-9]) part question\. )?.+)$/i;
 
 const firebaseApp = initializeApp(JSON.parse(process.env.FIREBASE_CREDS));
@@ -36,8 +36,8 @@ module.exports = {
 	async execute(interaction, currSets) {
 		await interaction.deferReply();
 
-		const title = interaction.options.getString('title').replaceAll(spaceRegex, ' ');
-		const description = interaction.options.getString('description').replaceAll(spaceRegex, ' ');
+		const title = removeWhiteSpace(interaction.options.getString('title'));
+		const description = removeWhiteSpace(interaction.options.getString('description'));
 		const url = interaction.options.getString('url');
 		const user = interaction.user;
 		const questionSet = [];
@@ -101,7 +101,6 @@ module.exports = {
 		}
 
 		const sheet = doc.sheetsByIndex[0];
-		let success = false;
 
 		// Attempts to load and process the spreadsheet rows.
 		try {
@@ -148,64 +147,39 @@ module.exports = {
 
 				// If an answer exists, add the question and answer pair to the question set.
 				questionSet.push({
-					question: questionMatch.groups.question?.replaceAll(spaceRegex, ' '),
+					question: removeWhiteSpace(questionMatch.groups.question),
 					answer: raw.slice(1).map((answer) => (
-						answer.replaceAll(spaceRegex, ' ')
+						removeWhiteSpace(answer)
 					)),
 					multi: questionMatch.groups.ansnum ? parseInt(questionMatch.groups.ansnum) : 1,
 					img: questionMatch.groups.img ?? null
 				});
 			}
 		} catch (error) {
-			console.log(error);
+			console.error(error);
 			return interaction.editReply({
 				content: 'Failure to extract data. Make sure your spreadsheet is formatted correctly.',
 			});
 		}
 
 		// Attempts to add the trivia to the database.
-		await set(ref(database, `questionSets/${title}`), {
-			description: description,
-			owner: user.id,
-			timestamp: (Date.now() / 1000) | 0,
-		})
-			.then(() => {
-				success = true;
-			})
-			.catch((error) => {
-				console.log(error);
+		if (!(uploadSet(database, questionSet, title, description, user.id))) {
+			// Cleans up if the operation was unsuccessful
+			deleteSet(database, title);
+			return interaction.editReply({
+				content: 'Failure to upload question set.'
 			});
-
-		if (success) {
-			await set(ref(database, `questionLists/${title}`), {
-				questions: questionSet,
-			})
-				.catch(async (error) => {
-					console.error(error);
-
-					// Cleans up if the operation was a half success.
-					await remove(ref(database, `questionSets/${title}`));
-
-					return interaction.editReply({
-						content: 'Upload unsuccessful! :(',
-					});
-				});
 		}
 
 		// Constructs an embed summary.
-		try {
-			const summary = AddSummaryEmbed(title, description, interaction.member, questionSet);
+		const summary = AddSummaryEmbed(title, description, interaction.member, questionSet);
 
-			interaction.channel.send({
-				embeds: [summary],
-			});
+		interaction.channel.send({
+			embeds: [summary],
+		});
 
-			return interaction.editReply({
-				content: 'Successfully added question set!',
-			});
-		} catch (error) {
-			console.log(error);
-		}
-
+		return interaction.editReply({
+			content: 'Successfully added question set!',
+		});
 	}
 };

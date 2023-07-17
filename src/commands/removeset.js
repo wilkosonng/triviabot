@@ -2,6 +2,7 @@ const { SlashCommandBuilder, PermissionsBitField } = require('discord.js');
 const { initializeApp } = require('firebase/app');
 const { getDatabase, ref, remove, get } = require('firebase/database');
 const { stringSimilarity } = require('string-similarity-js');
+const { deleteSet } = require('../helpers/helpers.js');
 require('dotenv').config;
 
 const firebaseApp = initializeApp(JSON.parse(process.env.FIREBASE_CREDS));
@@ -52,41 +53,21 @@ module.exports = {
 			});
 		}
 
-		let deleted = false;
-
 		// Checks if the user has sufficient permissions.
 		if (owner === user.id || user.permissions.has(PermissionsBitField.Flags.Administrator)) {
-			// Attempts to remove the question set data if they do.
-			await remove(ref(database, `questionSets/${title}`))
-				.then(() => {
-					deleted = true;
-				})
-				.catch((error) => {
-					console.log(error);
+			// Returns with the status of if the deletion was auccess
+			if (deleteSet(database, title)) {
+				return interaction.editReply({
+					content: `Successfully removed question set ${title}!`,
 				});
-
-			if (deleted) {
-				// Attempts to remove the question set questions if the first operation was a success.
-				await remove(ref(database, `questionLists/${title}`))
-					.catch((error) => {
-						deleted = false;
-						console.log(error);
-					});
+			} else {
+				return interaction.editReply({
+					content: 'Failed to remove question set!',
+				});
 			}
 		} else {
 			return interaction.editReply({
 				content: 'Insufficient permissions to delete question set: must be creator or admin.',
-			});
-		}
-
-		// Returns with the status of if the deletion was auccess
-		if (deleted) {
-			return interaction.editReply({
-				content: `Successfully removed question set ${title}!`,
-			});
-		} else {
-			return interaction.editReply({
-				content: 'Failed to remove question set!',
 			});
 		}
 	}
