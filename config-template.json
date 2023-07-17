@@ -6,12 +6,16 @@
  * Afterwards, delete this entire comment.
  * The following are descriptions of what to fill in:
  *
+ * clientID - Your application's ID as a string.
+ * embedColor - Color for the embed highlights. Default: 13719405
  * teams - An array of team names
  * teamEmojis - An array of emoji IDs with a one-to-one association with the team array.
  * threshold - Judgement threshold for answers. The higher, the stricter. Default: 1.2
 */
 
 {
+  "clientID": "123456789",
+  "embedColor": 13719405,
   "teams": ["Red", "Blue", "Yorange", "Green"],
   "teamEmojis": [ "1063010029260767272",
                   "1063010027591450696", 
