@@ -78,8 +78,6 @@ module.exports = {
 		const docText = await getFile(url);
 		const matches = docText.matchAll(questionRegex);
 
-		console.log(matches);
-
 		for (const match of matches) {
 			const { question, answers } = match.groups;
 			if (question && answers) {
