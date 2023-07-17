@@ -1,13 +1,12 @@
 const { SlashCommandBuilder } = require('discord.js');
-const validator = require('validator');
 const { initializeApp } = require('firebase/app');
-const { getDatabase, ref, set, get, remove } = require('firebase/database');
+const { getDatabase } = require('firebase/database');
 const { AddSummaryEmbed } = require('../helpers/embeds.js');
+const { removeWhiteSpace, uploadSet, deleteSet } = require('../helpers/helpers.js');
 const mammoth = require('mammoth');
 require('dotenv').config();
 
-const sentenceRegex = /^(\S+ ?)+$/;
-const questionRegex = /Q: (?<question>(This is an? (?<ansnum>[2-9]) part question\. )?[^\n]+)\s+A: (?<answer>[^\n]+)/gi;
+const questionRegex = /^(!!img\[(?<img>https?:\/\/(?:www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\+.~#?&\/=]*)\.(png|jpg|jpeg|gif|webp))\])?Q: (?<question>(This is an? (?<ansnum>[2-9]) part question\. )?[^\n]+)$\s+^A: (?<answers>[^\n]+)$/gim;
 
 const firebaseApp = initializeApp(JSON.parse(process.env.FIREBASE_CREDS));
 const database = getDatabase(firebaseApp);
@@ -35,22 +34,28 @@ module.exports = {
 	async execute(interaction, currSets) {
 		await interaction.deferReply();
 
-		const title = interaction.options.getString('title');
-		const description = interaction.options.getString('description');
+		const title = removeWhiteSpace(interaction.options.getString('title'));
+		const description = removeWhiteSpace(interaction.options.getString('description'));
 		const { url, size, contentType } = interaction.options.getAttachment('file');
 		const user = interaction.user;
-
-		let questionSet;
+		const questionSet = [];
 
 		// Returns if the title is invalid.
-		if (!sentenceRegex.test(title) || title.length > 60) {
+		if (title.length > 60) {
 			return interaction.editReply({
 				content: 'Invalid title. Please keep titles at most 60 characters with alphanumeric with punctuation and normal spacing!',
 			});
 		}
 
+		// Checks if title is already taken.
+		if (currSets.includes(title)) {
+			return interaction.editReply({
+				content: 'Title already exists. Please choose a different title!',
+			});
+		}
+
 		// Returns if the description is invalid.
-		if (!sentenceRegex.test(description) || description.length > 300) {
+		if (description.length > 300) {
 			return interaction.editReply({
 				content: 'Invalid description. Please make sure you are using normal spacing and the description is at most 300 characters!}',
 			});
@@ -59,26 +64,56 @@ module.exports = {
 		// Returns if the file is too large.
 		if (size > 1_024_000) {
 			return interaction.editReply({
-				content: 'File too large! Please keep files at a max of 1MB.',
+				content: 'File too large! Please keep files at a max of 1 MB.',
 			});
 		}
 
 		// Returns if the type of the file is not a .docx file.
-		if (!contentType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+		if (contentType !== 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
 			return interaction.editReply({
 				content: 'Invalid file. Please upload a valid .docx file.',
 			});
 		}
 
-		const html = await getFile(url);
-		const questions = html.matchAll(questionRegex);
+		const docText = await getFile(url);
+		const matches = docText.matchAll(questionRegex);
 
-		for (const question of questions) {
-			console.log(question);
+		console.log(matches);
+
+		for (const match of matches) {
+			const { question, answers } = match.groups;
+			if (question && answers) {
+				questionSet.push({
+					question: removeWhiteSpace(question),
+					answer: answers.split('|').map(answer => removeWhiteSpace(answer)),
+					multi: match.groups.ansnum ? parseInt(match.groups.ansnum) : 1,
+					img: match.groups.img ?? null
+				});
+			} else {
+				return interaction.editReply({
+					content: 'Something has gone terribly wrong with parsing the document!'
+				});
+			}
 		}
 
+		// Attempts to add the trivia to the database.
+		if (!(uploadSet(database, questionSet, title, description, user.id))) {
+			// Cleans up if the operation was unsuccessful
+			deleteSet(database, title);
+			return interaction.editReply({
+				content: 'Failure to upload question set.'
+			});
+		}
+
+		// Constructs an embed summary.
+		const summary = AddSummaryEmbed(title, description, interaction.member, questionSet);
+
+		interaction.channel.send({
+			embeds: [summary],
+		});
+
 		return interaction.editReply({
-			content: 'Check console, loser.'
+			content: 'Successfully added question set!',
 		});
 	}
 };

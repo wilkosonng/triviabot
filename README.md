@@ -9,6 +9,7 @@ Additional information can be obtained using the `/info` command.
 
 ### Question Set Creation and Deletion
 
+- `/adddoc` - Adds a question set from `.docx` file (Microsoft Word, Google Docs, LibreOffice, etc.).
 - `/addquizlet` - Adds a question set from a Quizlet URL.
 - `/addsheet` - Adds a question set from a public Google Sheets URL.
 - `/removeset` - Removes a question set of the given name.

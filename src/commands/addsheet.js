@@ -4,11 +4,11 @@ const sheets = require('google-spreadsheet');
 const { initializeApp } = require('firebase/app');
 const { getDatabase } = require('firebase/database');
 const { AddSummaryEmbed } = require('../helpers/embeds.js');
-const { removeWhiteSpace, uploadSet, deleteSet } = require('../helpers/helpers.js');
+const { removeWhiteSpace } = require('../helpers/helpers.js');
 require('dotenv').config();
 
 const sheetsRegex = /docs\.google\.com\/spreadsheets\/d\/(?<id>[\w-]+)\//;
-const questionRegex = /^(!!img\[(?<img>\S+\.(png|jpg|jpeg|gif|webp))\])?(?<question>(This is an? (?<ansnum>[2-9]) part question\. )?.+)$/i;
+const questionRegex = /^(!!img\[(?<img>https?:\/\/(?:www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\+.~#?&\/=]*)\.(png|jpg|jpeg|gif|webp))\])?(?<question>(This is an? (?<ansnum>[2-9]) part question\. )?.+)$/i;
 
 const firebaseApp = initializeApp(JSON.parse(process.env.FIREBASE_CREDS));
 const database = getDatabase(firebaseApp);
@@ -112,9 +112,9 @@ module.exports = {
 				});
 			}
 
-			if (rows.length > 1000) {
+			if (rows.length > 2000) {
 				return interaction.editReply({
-					content: 'Too many questions and answers. Please keep maximum rows to 1000. Split up the question set if necessary.',
+					content: 'Too many questions and answers. Please keep maximum rows to 2000. Split up the question set if necessary.',
 				});
 			}
 
@@ -125,7 +125,7 @@ module.exports = {
 
 				if (raw.length > 100) {
 					return interaction.editReply({
-						content: 'Too many questions and answers. Please keep maximum columns to 100.',
+						content: 'Too many answers. Please keep maximum columns to 100.',
 					});
 				}
 

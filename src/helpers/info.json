@@ -1,16 +1,29 @@
 {
   "general": {
-    "description": "Welcome to the trivia bot! This is a open-source Discord bot designed to allow users to upload and play trivia question sets right inside Discord! Below is a quickstart guide that should cover the basics. If you need more information on a particular command, use `y/info command:<command_name>` to pull up more detailed information.\n\n### Creating new trivia sets.\nCurrently, the bot supports importing trivia sets from Google Sheets using the `/addsheet` command and Quizlet using the `/addquizlet` command. For Google Sheets, you'll need to format the sheet correctly. The info page on the `/addsheet` command should provide you with instructions and a template.\n\n### Removing Question Sets\nRemove a question set using the `/removeset` command. Note that you must either be a server administrator the owner of the question set in order to successfully remove a set.\n\n### Looking Up Question Sets\nThe discord bot provides you two ways to look up uploaded question sets. First, the `/listquestions` command will list out up to 10 question sets and their authors that match your search. For more detailed information on a question set, use `/questioninfo name:<set_name>` (this is case-sensitive).\n\n### Playing Trivia\nTo start a text-channel game of trivia, use the `/start` command. You have many customizable parameters including the question set to play, the number of teams, and whether or not you lose points. More is soon to come!\n\nAnd with that, you should be good to go! If you still have questions, once again, you can run the `/info` command on other commands for more detailed information.",
+    "description": "Welcome to the trivia bot! This is a open-source Discord bot designed to allow users to upload and play trivia question sets right inside Discord! Below is a quickstart guide that should cover the basics. If you need more information on a particular command, use `/info command:<command_name>` to pull up more detailed information.\n\n### Creating new trivia sets.\nCurrently, the bot supports importing trivia sets from a `.docx` file using the `/adddoc` command, Google Sheets using the `/addsheet` command, and Quizlet using the `/addquizlet` command. For `.docx` files and Google Sheets, you'll need to format the sheet correctly. The info page for the respective commands should provide you with instructions and a template.\n\n### Removing Question Sets\nRemove a question set using the `/removeset` command. Note that you must either be a server administrator the owner of the question set in order to successfully remove a set.\n\n### Looking Up Question Sets\nThe Discord bot provides you two ways to look up uploaded question sets. First, the `/listsets` command will list out up to 10 question sets and their authors that match your search. For more detailed information on a question set, use `/setinfo name:<set_name>` (this is case-sensitive).\n\n### Playing Trivia\nTo start a text-channel game of trivia, use the `/start` command. You have many customizable parameters including the question set to play, the number of teams, and whether or not you lose points. More is soon to come!\n\nAnd with that, you should be good to go! If you still have questions, once again, you can run the `/info` command on other commands for more detailed information.",
     "fields": []
   },
 
   "adddoc": {
-    "description": "WIP",
-    "fields": []
+    "description": "Add a question set from a .docx (NOT .doc) file.\n\n**IMPORTANT** - Questions should be formatted in the following manner (any italics, underlining, or bolding will be ignored):\n```Q: Question 1\nA: Answer 1\n\nQ: Question 2\nA: Answer 2\n\n...```\n**Do not** create a new line (pressing the enter key) in the middle of a question/answer. It will not be counted.\n- To accept multiple multiple answers, separate your answers with the `|` (vertical bar) character.\n- To ask a multi-part question, use `This is a # part question. ` before your question. Note that this is punctuation-sensitive and the `#` must be the numeric digit from 2-9, not the word.\n- To include an image in your question, use `!!img[URL]` before the `Q:` in your question.\n\nFor example, ```!!img[https://bolivia.png]Q: This is a 2 part question. What are the capitals of Bolivia?\n\nA: La Paz | Santa Cruz```\nFor a formatted example, see https://tinyurl.com/triviabotislamgeog.",
+    "fields": [
+      {
+        "name": "Title `(required)` -",
+        "value": "The name you wish to give to the question set. This must be unused in the current list of question sets and unique to the new set."
+      },
+      {
+        "name": "Description `(required)` -",
+        "value": "The description to add to the question set. This should provide a meaningful summary of what the question set tests as well as specific instructions in how to answer each question."
+      },
+      {
+        "name": "File `(required)` -",
+        "value": "The `.docx` file you wish to upload. Note that the file must be less than 1 MB in size to be processed."
+      }
+    ]
   },
 
   "addquizlet": {
-    "description": "Add a question set from Quizlet, given a valid quizlet URL of the form `https://quizlet.com/<id>/<name>`.\n**NOTE** - Questions are by default assigned to the `term` (front) and answers are assigned to the `definition` (back) of the flashcard. To flip, use the `flip` parameter. Images are currently not supported at this time.\n",
+    "description": "Add a question set from Quizlet, given a valid quizlet URL of the form `https://quizlet.com/<id>/<name>`.\n\n**NOTE** - Questions are by default assigned to the `term` (front) and answers are assigned to the `definition` (back) of the flashcard. To flip, use the `flip` parameter. Images are currently not supported at this time.\n",
     "fields": [
       {
         "name": "Title `(required)` -",
@@ -32,7 +45,7 @@
   },
 
   "addsheet": {
-    "description": "Add a question set from Google Sheets, given a valid Quizlet URL of the form `https://docs.google.com/spreadsheets/<id>`.\n\n**IMPORTANT** - For formatting, leave the first row blank. Questions are treated as the first column of each row and answers for each question are scanned on separate columns for the rest of the row.\n- To accept multiple answers, put each answer in a separate column on the question's row.\n- To ask a multi-part question, use `This is a # part question. ` before your question. Note that this is case and punctuation sensitive.\n- To include an image in your question, use `!!img[URL]` before your question.\nFor example, `!!img[https://bolivia.png]This is a 2 part question. What is the capital of Bolivia?`. For a template, see https://tinyurl.com/triviabotsheets. For an example, see https://tinyurl.com/triviabotuspres",
+    "description": "Add a question set from Google Sheets, given a valid Quizlet URL of the form `https://docs.google.com/spreadsheets/<id>`.\n\n**IMPORTANT** - For formatting, leave the first row blank. Questions are treated as the first column of each row and answers for each question are scanned on separate columns for the rest of the row.\n- To accept multiple answers, put each answer in a separate column on the question's row.\n- To ask a multi-part question, use `This is a # part question. ` before your question. Note that this is punctuation-sensitive and the `#` must be the numeric digit from 2-9, not the word.\n- To include an image in your question, use `!!img[URL]` before your question.\n\nFor example, `!!img[https://bolivia.png]This is a 2 part question. What is the capital of Bolivia?` would include both an image and be a multi-part question.\n\nFor a template, see https://tinyurl.com/triviabotsheets.\nFor a formatted example, see https://tinyurl.com/triviabotuspres.",
     "fields": [
       {
         "name": "Title `(required)` -",
