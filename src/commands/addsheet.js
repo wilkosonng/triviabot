@@ -7,7 +7,7 @@ const { AddSummaryEmbed } = require('../helpers/embeds.js');
 require('dotenv').config();
 
 const sheetsRegex = /docs\.google\.com\/spreadsheets\/d\/(?<id>[\w-]+)\//;
-const spaceRegex = /\s+/;
+const spaceRegex = /\s+/g;
 const questionRegex = /^(!!img\[(?<img>\S+\.(png|jpg|jpeg|gif|webp))\])?(?<question>(This is an? (?<ansnum>[2-9]) part question\. )?.+)$/i;
 
 const firebaseApp = initializeApp(JSON.parse(process.env.FIREBASE_CREDS));
@@ -37,7 +37,7 @@ module.exports = {
 		await interaction.deferReply();
 
 		const title = interaction.options.getString('title').replaceAll(spaceRegex, ' ');
-		const description = interaction.options.getString('description').replaceall(spaceRegex, ' ');
+		const description = interaction.options.getString('description').replaceAll(spaceRegex, ' ');
 		const url = interaction.options.getString('url');
 		const user = interaction.user;
 		const questionSet = [];

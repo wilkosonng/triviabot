@@ -7,7 +7,7 @@ const { AddSummaryEmbed } = require('../helpers/embeds.js');
 require('dotenv').config();
 
 const quizletRegex = /quizlet\.com\/(?<id>\d+)\/(?<name>[a-z0-9-]+flash-cards)/;
-const spaceRegex = /\s+/;
+const spaceRegex = /\s+/g;
 
 const firebaseApp = initializeApp(JSON.parse(process.env.FIREBASE_CREDS));
 const database = getDatabase(firebaseApp);

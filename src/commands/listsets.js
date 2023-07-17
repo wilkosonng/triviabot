@@ -17,24 +17,24 @@ module.exports = {
 				.setName('title')
 				.setDescription('Search for specific sets via their name.')
 				.setRequired(false)),
-	async execute(interaction, sets) {
+	async execute(interaction, currSets) {
 		const keyword = interaction.options.getString('name')?.toLowerCase();
 
 		if (keyword) {
-			sets = sets.filter((set) => stringSimilarity(set[0], keyword) > 0.5 || set[0].toLowerCase().includes(keyword));
+			currSets = currSets.filter((set) => stringSimilarity(set[0], keyword) > 0.5 || set[0].toLowerCase().includes(keyword));
 		}
 
-		if (!sets.length) {
+		if (!currSets.length) {
 			return interaction.reply({
 				content: 'No sets matching query found!'
 			});
 		}
 
-		const maxPage = Math.ceil(sets.length / 10);
+		const maxPage = Math.ceil(currSets.length / 10);
 		const page = Math.min(interaction.options.getInteger('page') ?? 1, maxPage);
 
 		return interaction.reply({
-			embeds: [ListEmbed(page, maxPage, keyword, sets)]
+			embeds: [ListEmbed(page, maxPage, keyword, currSets)]
 		});
 	}
 };
