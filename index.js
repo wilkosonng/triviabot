@@ -47,6 +47,7 @@ client.once(Events.ClientReady, async clientObject => {
 			console.log(error);
 		});
 
+	// Keeps local cache of question set names
 	onValue(ref(database, 'questionSets'), (snapshot) => {
 		sets = snapshot.val() ?? {};
 		console.log('Question Sets Updated:');
@@ -74,13 +75,25 @@ client.on(Events.InteractionCreate, async interaction => {
 
 		try {
 			switch (commandName) {
-				case 'listquestions':
+				case 'adddoc':
+				case 'addquizlet':
+				case 'addsheet':
+				case 'removeset':
+				case 'setinfo':
+				case 'startgame':
+					// Passes array of set name cache
+					await command.execute(interaction, Object.keys(sets));
+					break;
+				case 'listsets':
+					// Passes array of set metadata cache
 					await command.execute(interaction, Object.entries(sets));
 					break;
 				case 'info':
+					// Passes in command list
 					await command.execute(interaction, Array.from(client.commands.keys()));
 					break;
 				default:
+					// Otherwise, passes in only interaction
 					await command.execute(interaction);
 			}
 		} catch (error) {

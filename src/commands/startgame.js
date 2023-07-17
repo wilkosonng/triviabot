@@ -45,7 +45,7 @@ module.exports = {
 		await interaction.respond(choices.map((set) => ({ name: set, value: set })));
 	},
 
-	async execute(interaction) {
+	async execute(interaction, currSets) {
 		await interaction.deferReply();
 
 		if (currGames.has(interaction.channel.id)) {
@@ -61,7 +61,6 @@ module.exports = {
 		const teamInfo = new Map();
 		const players = new Map();
 		let questions, description, reactionCollector;
-		let titleExists = false;
 
 		currGames.add(channel.id);
 		for (let i = 0; i < numTeams; i++) {
@@ -75,44 +74,22 @@ module.exports = {
 		try {
 			// If the set is undefined, chooses a random set.
 			if (set == null) {
-				await get(ref(database, 'questionSets')).then((snapshot) => {
-					if (snapshot.exists()) {
-						const sets = snapshot.val();
-						const setNames = Object.keys(sets);
-						if (sets.length !== 0) {
-							set = setNames[Math.random() * setNames.length | 0];
-							description = sets[set].description;
-							titleExists = true;
-						}
-					}
+				set = currSets[Math.random() * currSets.length | 0];
+			} else if (!currSets.includes(set)) {
+				currGames.delete(channel.id);
+				return interaction.editReply({
+					content: `No question set of name ${set}.`
 				});
 			}
-			// Checks if title exists
+
+			// Gets set metadata.
 			await get(ref(database, `questionSets/${set}`)).then((snapshot) => {
 				if (snapshot.exists()) {
 					description = snapshot.val().description;
-					titleExists = true;
 				}
 			});
-		} catch (error) {
-			console.error(error);
-			return interaction.editReply({
-				content: 'Database reference error.',
-			});
-		}
 
-		// If it doesn't, return with an error.
-		if (set == null) {
-			currGames.delete(channel.id);
-			return interaction.editReply({
-				content: 'No question sets found in database.',
-			});
-		} else if (!titleExists) {
-			currGames.delete(channel.id);
-			return interaction.editReply({
-				content: `No question set of name ${set}.`,
-			});
-		} else {
+			// Get set questions.
 			await get(ref(database, `questionLists/${set}/questions`)).then((snapshot) => {
 				if (snapshot.exists()) {
 					questions = snapshot.val();
@@ -120,6 +97,11 @@ module.exports = {
 						randomize(questions);
 					}
 				}
+			});
+		} catch (error) {
+			console.error(error);
+			return interaction.editReply({
+				content: 'Database reference error.',
 			});
 		}
 

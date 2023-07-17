@@ -2,7 +2,7 @@ const { SlashCommandBuilder } = require('discord.js');
 const validator = require('validator');
 const puppeteer = require('puppeteer-extra');
 const { initializeApp } = require('firebase/app');
-const { getDatabase, ref, set, get, remove } = require('firebase/database');
+const { getDatabase, ref, set, remove } = require('firebase/database');
 const { AddSummaryEmbed } = require('../helpers/embeds.js');
 require('dotenv').config();
 
@@ -43,7 +43,7 @@ module.exports = {
 				.setDescription('Flip the questions and answers? (default: false)')
 				.setRequired(false)),
 
-	async execute(interaction) {
+	async execute(interaction, currSets) {
 		await interaction.deferReply();
 
 		const title = interaction.options.getString('title').replaceAll(spaceRegex, ' ');
@@ -53,12 +53,18 @@ module.exports = {
 		const user = interaction.user;
 
 		let questionSet;
-		let titleExists = false;
 
 		// Returns if the title is invalid.
 		if (title.length > 60) {
 			return interaction.editReply({
 				content: 'Invalid title. Please keep titles at most 60 characters with alphanumeric with punctuation and normal spacing!',
+			});
+		}
+
+		// Checks if title is already taken.
+		if (currSets.includes(title)) {
+			return interaction.editReply({
+				content: 'Title already exists. Please choose a different title!',
 			});
 		}
 
@@ -73,25 +79,6 @@ module.exports = {
 		if (!validator.isURL(url)) {
 			return interaction.editReply({
 				content: 'Invalid URL. Please check to make sure you submitted a valid URL!',
-			});
-		}
-
-		// Checks if title is already taken.
-		try {
-			await get(ref(database, `questionSets/${title}/owner`)).then((snapshot) => {
-				if (snapshot.exists()) {
-					titleExists = true;
-				}
-			});
-		} catch (error) {
-			return interaction.editReply({
-				content: 'Database reference error.',
-			});
-		}
-
-		if (titleExists) {
-			return interaction.editReply({
-				content: 'Title already exists. Please choose a different title!',
 			});
 		}
 

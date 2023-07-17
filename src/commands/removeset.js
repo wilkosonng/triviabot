@@ -24,20 +24,25 @@ module.exports = {
 		await interaction.respond(choices.map((set) => ({ name: set, value: set })));
 	},
 
-	async execute(interaction) {
+	async execute(interaction, currSets) {
 		await interaction.deferReply();
 
 		const title = interaction.options.getString('title');
 		const user = interaction.member;
 
 		let owner = null;
-		let titleExists = false;
+
+		// Checks if title exists
+		if (!currSets.includes(title)) {
+			return interaction.editReply({
+				content: `No question set of name ${title}.`
+			});
+		}
 
 		try {
-			// Checks if title exists
+			// Gets owner data
 			await get(ref(database, `questionSets/${title}/owner`)).then((snapshot) => {
 				if (snapshot.exists()) {
-					titleExists = true;
 					owner = snapshot.val();
 				}
 			});
@@ -47,18 +52,10 @@ module.exports = {
 			});
 		}
 
-		// If it doesn't, return with an error.
-		if (!titleExists) {
-			return interaction.editReply({
-				content: `No question set of name ${title}.`,
-			});
-		}
-
 		let deleted = false;
 
 		// Checks if the user has sufficient permissions.
 		if (owner === user.id || user.permissions.has(PermissionsBitField.Flags.Administrator)) {
-
 			// Attempts to remove the question set data if they do.
 			await remove(ref(database, `questionSets/${title}`))
 				.then(() => {
@@ -69,7 +66,6 @@ module.exports = {
 				});
 
 			if (deleted) {
-
 				// Attempts to remove the question set questions if the first operation was a success.
 				await remove(ref(database, `questionLists/${title}`))
 					.catch((error) => {

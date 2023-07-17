@@ -2,7 +2,7 @@ const { SlashCommandBuilder } = require('discord.js');
 const validator = require('validator');
 const sheets = require('google-spreadsheet');
 const { initializeApp } = require('firebase/app');
-const { getDatabase, ref, set, get, remove } = require('firebase/database');
+const { getDatabase, ref, set, remove } = require('firebase/database');
 const { AddSummaryEmbed } = require('../helpers/embeds.js');
 require('dotenv').config();
 
@@ -33,7 +33,7 @@ module.exports = {
 				.setDescription('Google Sheets URL of the question set')
 				.setRequired(true)),
 
-	async execute(interaction) {
+	async execute(interaction, currSets) {
 		await interaction.deferReply();
 
 		const title = interaction.options.getString('title').replaceAll(spaceRegex, ' ');
@@ -42,8 +42,6 @@ module.exports = {
 		const user = interaction.user;
 		const questionSet = [];
 
-		let titleExists = false;
-
 		// Returns if the title is invalid.
 		if (title.length > 60) {
 			return interaction.editReply({
@@ -51,7 +49,12 @@ module.exports = {
 			});
 		}
 
-		console.log(description);
+		// Checks if title is already taken.
+		if (currSets.includes(title)) {
+			return interaction.editReply({
+				content: 'Title already exists. Please choose a different title!',
+			});
+		}
 
 		// Returns if the description is invalid.
 		if (description.length > 300) {
@@ -73,25 +76,6 @@ module.exports = {
 		if (match?.groups?.id == null) {
 			return interaction.editReply({
 				content: 'Cannot find Spreadsheet ID from URL. Make sure your URL is a valid Google Sheets URL!',
-			});
-		}
-
-		// Checks if title is already taken.
-		try {
-			await get(ref(database, `questionSets/${title}/owner`)).then((snapshot) => {
-				if (snapshot.exists()) {
-					titleExists = true;
-				}
-			});
-		} catch (error) {
-			return interaction.editReply({
-				content: 'Database reference error.',
-			});
-		}
-
-		if (titleExists) {
-			return interaction.editReply({
-				content: 'Title already exists. Please choose a different title!',
 			});
 		}
 

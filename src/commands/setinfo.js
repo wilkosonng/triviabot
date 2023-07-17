@@ -25,39 +25,37 @@ module.exports = {
 		await interaction.respond(choices.map((set) => ({ name: set, value: set })));
 	},
 
-	async execute(interaction) {
+	async execute(interaction, currSets) {
 		await interaction.deferReply();
 
 		const title = interaction.options.getString('title');
 
-		let titleExists = false;
 		let dataRes;
 		let questRes;
 
+		// Checks if title exists
+		if (!currSets.includes(title)) {
+			return interaction.editReply({
+				content: `No question set of name ${title}.`
+			});
+		}
+
 		try {
-			// Checks if title exists
+			// Gets question set info
 			await get(ref(database, `questionSets/${title}`)).then((snapshot) => {
 				if (snapshot.exists()) {
-					titleExists = true;
 					dataRes = snapshot.val();
+				}
+			});
+
+			await get(ref(database, `questionLists/${title}/questions`)).then((snapshot) => {
+				if (snapshot.exists()) {
+					questRes = snapshot.val();
 				}
 			});
 		} catch (error) {
 			return interaction.editReply({
 				content: 'Database reference error.',
-			});
-		}
-
-		// If it doesn't, return with an error.
-		if (!titleExists) {
-			return interaction.editReply({
-				content: `No question set of name ${title}.`,
-			});
-		} else {
-			await get(ref(database, `questionLists/${title}/questions`)).then((snapshot) => {
-				if (snapshot.exists()) {
-					questRes = snapshot.val();
-				}
 			});
 		}
 
