@@ -1,4 +1,4 @@
-const { Client, Member, EmbedBuilder, bold, underscore, inlineCode, heading, userMention } = require('discord.js');
+const { Client, Member, EmbedBuilder, bold, underscore, inlineCode, userMention, time } = require('discord.js');
 const { embedColor, teams, teamEmojis } = require('../../config.json');
 const info = require('./info.json');
 
