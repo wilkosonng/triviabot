@@ -1,4 +1,4 @@
-const { SlashCommandBuilder } = require('discord.js');
+const { SlashCommandBuilder, PermissionsBitField } = require('discord.js');
 const { teams, teamEmojis } = require('../../config.json');
 const { initializeApp } = require('firebase/app');
 const { getDatabase, ref, get } = require('firebase/database');
@@ -61,6 +61,10 @@ module.exports = {
 		const teamInfo = new Map();
 		const players = new Map();
 		let questions, description, reactionCollector;
+
+		if (!channel.permissionsFor(interaction.client.user.id).has(PermissionsBitField.Flags.SendMessages)) {
+			return await interaction.editReply('Error: No permissions to send messages in channel!');
+		}
 
 		currGames.add(channel.id);
 		for (let i = 0; i < numTeams; i++) {
