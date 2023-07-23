@@ -4,7 +4,7 @@ const puppeteer = require('puppeteer-extra');
 const { initializeApp } = require('firebase/app');
 const { getDatabase } = require('firebase/database');
 const { AddSummaryEmbed } = require('../helpers/embeds.js');
-const { removeWhiteSpace, uploadSet, deleteSet } = require('../helpers/helpers.js');
+const { removeWhiteSpace, replaceLineBreaks, uploadSet, deleteSet } = require('../helpers/helpers.js');
 require('dotenv').config();
 
 const quizletRegex = /quizlet\.com\/(?<id>\d+)\/(?<name>[a-z0-9-]+flash-cards)/;
@@ -145,8 +145,10 @@ async function scrapeSet(url, flip) {
 		await page.click('button[aria-label="See more"]');
 	}
 
+	await page.addScriptTag({ content: `${removeWhiteSpace} ${replaceLineBreaks}` });
+
 	// eslint-disable-next-line no-shadow
-	const data = await page.evaluate((flip, removeWhiteSpace) => {
+	const data = await page.evaluate((flipped) => {
 		const questions = Array.from(document.querySelectorAll('.SetPageTerm-wordText > .TermText'));
 		const answers = Array.from(document.querySelectorAll('.SetPageTerm-definitionText > .TermText'));
 
@@ -154,13 +156,18 @@ async function scrapeSet(url, flip) {
 			return null;
 		}
 
-		return questions.map((e, i) => ({
-			question: flip ? removeWhiteSpace(answers[i]) : removeWhiteSpace(e.innerHTML),
-			answer: flip ? [removeWhiteSpace(e.innerHTML)] : [removeWhiteSpace(answers[i].innerHTML)],
-			multi: 1,
-			img: null
-		}));
-	}, flip, removeWhiteSpace);
+		return questions.map((e, i) => {
+			const question = replaceLineBreaks(removeWhiteSpace(e.innerHTML));
+			const answer = replaceLineBreaks(removeWhiteSpace(answers[i].innerHTML));
+
+			return {
+				question: flipped ? answer : question,
+				answer: flipped ? [question] : [answer],
+				multi: 1,
+				img: null
+			};
+		});
+	}, flip);
 
 	return data;
 }
