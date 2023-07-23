@@ -1,5 +1,4 @@
 const { ref, set, remove } = require('firebase/database');
-const spaceRegex = /\s+/g;
 
 /**
  * Removes the question set data from the Firebase database
@@ -29,10 +28,20 @@ function deleteSet(database, title) {
  * Removes all that pesky extraneous white space for consistent styling
  * @param {string} string String to be formatted
  *
- * @returns {string} Original space with extraneous white space removed
+ * @returns {string} Original string with extraneous white space removed
 */
 function removeWhiteSpace(string) {
-	return string.trim().replaceAll(spaceRegex, ' ');
+	return string.trim().replaceAll(/\s+/g, ' ');
+}
+
+/**
+ * Replaces HTML <br> tags with new line characters.
+ * @param {string} string String to be formatted
+ *
+ * @returns {string} Original string with line brea
+*/
+function replaceLineBreaks(string) {
+	return string.trim().replaceAll(/\<br\>/g, '\n');
 }
 
 /**
@@ -69,5 +78,5 @@ function uploadSet(database, questionSet, title, description, owner) {
 }
 
 module.exports = {
-	deleteSet, removeWhiteSpace, uploadSet
+	deleteSet, removeWhiteSpace, replaceLineBreaks, uploadSet
 };

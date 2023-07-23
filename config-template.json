@@ -10,7 +10,7 @@
  * embedColor - Color for the embed highlights. Default: 13719405
  * teams - An array of team names
  * teamEmojis - An array of emoji IDs with a one-to-one association with the team array.
- * threshold - Judgement threshold for answers. The higher, the stricter. Default: 1.2
+ * threshold - Judgement threshold for answers. The higher, the more lenient. Default: 1.5
 */
 
 {
@@ -22,5 +22,5 @@
                   "1063010115353059338", 
                   "1118199752253784285"],
 
-  "threshold": 1.2
+  "threshold": 1.5
 }
