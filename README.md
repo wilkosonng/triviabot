@@ -33,7 +33,7 @@ In order to host this bot, you will need the following services:
 2. [Discord Bot Token](https://discordjs.guide/preparations/setting-up-a-bot-application.html#creating-your-bot) via Discord's developer portal.
 3. [Firebase Realtime Database](https://console.firebase.google.com/) account and credentials.
 4. The above database should be [configured to handle logins via E-mail and Password](https://firebase.google.com/docs/auth/web/password-auth#before_you_begin). You will need the associated E-mail and Password Authentication for the Realtime Database instance.
-5. [Google Service Account and Credentials](https://https://console.cloud.google.com/).
+5. [Google Service Account and Credentials](https://console.cloud.google.com/).
 
 ### Instructions
 
