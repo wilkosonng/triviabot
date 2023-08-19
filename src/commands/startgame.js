@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, PermissionsBitField } = require('discord.js');
+const { ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType, SlashCommandBuilder, PermissionsBitField } = require('discord.js');
 const { teams, teamEmojis } = require('../../config.json');
 const { initializeApp } = require('firebase/app');
 const { getDatabase, ref, get } = require('firebase/database');
@@ -10,6 +10,26 @@ require('dotenv').config();
 const firebaseApp = initializeApp(JSON.parse(process.env.FIREBASE_CREDS));
 const database = getDatabase(firebaseApp);
 const currGames = new Set();
+
+// Sets up action rows for joining the game
+const rows = [new ActionRowBuilder()];
+
+teamEmojis.forEach((emoji, i) => {
+	rows.push(ActionRowBuilder.from(rows[i])
+		.addComponents(
+			new ButtonBuilder()
+				.setCustomId(`${i}`)
+				.setStyle(ButtonStyle.Primary)
+				.setEmoji(emoji))
+	);
+});
+
+rows.map(row => row.addComponents(
+	new ButtonBuilder()
+		.setCustomId('leave')
+		.setStyle(ButtonStyle.Secondary)
+		.setEmoji('❌')
+));
 
 module.exports = {
 	data: new SlashCommandBuilder()
@@ -48,11 +68,6 @@ module.exports = {
 	async execute(interaction, currSets) {
 		await interaction.deferReply();
 
-		if (currGames.has(interaction.channel.id)) {
-			await interaction.editReply('Error: Game has already started in this channel!');
-			return;
-		}
-
 		let set = interaction.options?.getString('questionset');
 		const numTeams = interaction.options?.getInteger('teams') ?? 1;
 		const losePoints = interaction.options?.getBoolean('losepoints') ?? true;
@@ -60,7 +75,18 @@ module.exports = {
 		const channel = interaction.channel;
 		const teamInfo = new Map();
 		const players = new Map();
-		let questions, description, reactionCollector;
+		let questions, description, joinCollector;
+
+		// Avoids duplicate games in the channel.
+		if (currGames.has(interaction.channel.id)) {
+			await interaction.editReply('Error: Game has already started in this channel!');
+			return;
+		}
+
+		// Checks that the bot has permissions for the channel,
+		if (!channel.permissionsFor(interaction.client.user.id).has(PermissionsBitField.Flags.ViewChannel)) {
+			return await interaction.editReply('Error: No permissions to view channel!');
+		}
 
 		if (!channel.permissionsFor(interaction.client.user.id).has(PermissionsBitField.Flags.SendMessages)) {
 			return await interaction.editReply('Error: No permissions to send messages in channel!');
@@ -111,60 +137,72 @@ module.exports = {
 
 		try {
 			// Ah yes, socket timeout.
-			await channel.send({
-				embeds: [StartEmbed(set, description, numTeams, teamInfo)]
-			})
-				.then(async (msg) => {
-					for (let i = 0; i < numTeams; i++) {
-						await msg.react(msg.client.emojis.cache.get(teamEmojis[i]));
+			const msg = await channel.send({
+				embeds: [StartEmbed(set, description, numTeams, teamInfo)],
+				components: [rows[numTeams]]
+			});
+
+			joinCollector = msg.createMessageComponentCollector({
+				filter: (buttonInteraction) => !buttonInteraction.user.bot,
+				time: 300_000
+			});
+
+			joinCollector.on('collect', (buttonInteraction) => {
+				const customId = buttonInteraction.customId;
+				const newTeam = customId === 'leave' ? null : teamEmojis[parseInt(customId)];
+				const player = buttonInteraction.user.id;
+				const username = buttonInteraction.user.username;
+				const joined = players.has(player);
+
+				if (joined) {
+					const oldTeam = players.get(player)['team'];
+
+					if (oldTeam === newTeam) {
+						return buttonInteraction.reply({
+							content: `Already joined ${teams[parseInt(customId)]} team!`,
+							ephemeral: true
+						});
 					}
 
-					await msg.react('❌');
+					teamInfo.get(oldTeam).players.delete(player);
+				}
 
-					reactionCollector = msg.createReactionCollector({
-						filter: (reaction, user) => !user.bot && (reaction.emoji.name === '❌' || teamEmojis.includes(reaction.emoji.id)),
-						time: 120_000
-					});
+				if (customId === 'leave') {
+					players.delete(player);
 
-					reactionCollector.on('collect', (reaction, user) => {
-						const newTeam = reaction.emoji.id;
-						const player = user.id;
-
-						if (players.has(player)) {
-							const oldTeam = players.get(player)['team'];
-
-							if (oldTeam === newTeam) {
-								return;
-							}
-
-							teamInfo.get(oldTeam).players.delete(player);
-						}
-
-						if (reaction.emoji.name === '❌') {
-							players.delete(player);
-							msg.edit(
-								{
-									embeds: [StartEmbed(set, description, numTeams, teamInfo)]
-								}
-							);
-							return;
-						}
-
-						teamInfo.get(newTeam).players.add(player);
-						players.set(player, {
-							name: user.username,
-							team: newTeam,
-							score: 0
-						});
-
-						msg.edit(
+					return joined ?
+						buttonInteraction.update(
 							{
-								embeds: [StartEmbed(set, description, numTeams, teamInfo)]
+								embeds: [StartEmbed(set, description, numTeams, teamInfo)
+									.setFooter({ text: `${username} has left the game!` })]
 							}
-						);
-					});
+						) :
+						buttonInteraction.reply({
+							content: 'You have yet to join a team!',
+							ephemeral: true
+						});
+				}
+
+				teamInfo.get(newTeam).players.add(player);
+				players.set(player, {
+					name: username,
+					team: newTeam,
+					score: 0
 				});
 
+				return buttonInteraction.update(
+					{
+						embeds: [StartEmbed(set, description, numTeams, teamInfo)
+							.setFooter({ text: `${username} has ${joined ? 'changed to' : 'joined'} ${teams[parseInt(customId)]}!` })]
+					}
+				);
+			});
+
+			joinCollector.on('end', () => {
+				msg.edit({
+					components: []
+				});
+			});
 		} catch (error) {
 			console.error(error);
 			currGames.delete(channel.id);
@@ -184,7 +222,7 @@ module.exports = {
 				case 'ready':
 					if (players.size) {
 						startCollector.stop();
-						reactionCollector.stop();
+						joinCollector.stop();
 						msg.reply('Game starting... Type `endtrivia` to end the game, `playerlb` to access player scores, `teamlb` to access team scores, and `buzz` to buzz in for a question!');
 						await playGame(channel, teamInfo, players, losePoints, set, questions);
 						currGames.delete(channel.id);
@@ -216,7 +254,7 @@ module.exports = {
 		// Thanos time
 		function endGame() {
 			startCollector.stop();
-			reactionCollector.stop();
+			joinCollector.stop();
 			currGames.delete(channel.id);
 		}
 
