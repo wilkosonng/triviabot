@@ -92,7 +92,7 @@ function ListEmbed(page, maxPage, keyword, questionSets) {
 	const leftIndex = 10 * (page - 1);
 	const rightIndex = Math.min(10 * page, questionSets.length);
 	const slice = questionSets.slice(leftIndex, rightIndex);
-	let description = keyword ? underscore(`Matching query ${bold(keyword)}\n`) : '';
+	let description = keyword ? `### > Matching query ${inlineCode(keyword)}\n` : '';
 
 	for (const [title, metadata] of slice) {
 		description += `${inlineCode(title)} - <@${metadata.owner}>\n`;
