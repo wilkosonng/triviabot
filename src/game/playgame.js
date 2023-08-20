@@ -3,11 +3,11 @@ const { stringSimilarity } = require('string-similarity-js');
 const { BuzzEmbed, PlayerLeaderboardEmbed, ResultEmbed, QuestionEmbed, TeamLeaderboardEmbed } = require('../helpers/embeds.js');
 
 // Starts the game passed through.
-async function playGame(channel, teamInfo, players, losePoints, set, questions) {
+async function playGame(channel, startChannel, teamInfo, players, losePoints, set, questions) {
 	let questionNumber = 1;
 	let ended = false;
 
-	const commandCollector = channel.createMessageCollector({
+	const commandCollector = startChannel.createMessageCollector({
 		filter: (msg) => {
 			const content = msg.content.toLowerCase();
 			return content === 'endtrivia' || content === 'teamlb' || content === 'playerlb';

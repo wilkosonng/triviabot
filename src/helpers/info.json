@@ -129,6 +129,10 @@
       {
         "name": "Lose Points `(optional)` -",
         "value": "Whether or not incorrect answers or timing out of an answer loses points in the game. If left blank, incorrect and answer time outs will lose points."
+      },
+      {
+        "name": "channel `(optional)` -",
+        "value": "The channel you wish the game to be played in. Default: the channel you invoke the command in."
       }
     ]
   }

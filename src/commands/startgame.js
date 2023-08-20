@@ -57,6 +57,11 @@ module.exports = {
 			option
 				.setName('losepoints')
 				.setDescription('Lose points on wrong answer? True by default.')
+				.setRequired(false))
+		.addChannelOption(option =>
+			option
+				.setName('channel')
+				.setDescription('Channel to play in. Current channel by default.')
 				.setRequired(false)),
 
 	async autocomplete(interaction, questionSets) {
@@ -72,13 +77,14 @@ module.exports = {
 		const numTeams = interaction.options?.getInteger('teams') ?? 1;
 		const losePoints = interaction.options?.getBoolean('losepoints') ?? true;
 		const shuffle = interaction.options?.getBoolean('shuffle') ?? true;
-		const channel = interaction.channel;
+		const channel = interaction.options?.getChannel('channel') ?? interaction.channel;
+		const startChannel = interaction.channel;
 		const teamInfo = new Map();
 		const players = new Map();
 		let questions, description, joinCollector;
 
 		// Avoids duplicate games in the channel.
-		if (currGames.has(interaction.channel.id)) {
+		if (currGames.has(channel.id)) {
 			await interaction.editReply('Error: Game has already started in this channel!');
 			return;
 		}
@@ -211,7 +217,7 @@ module.exports = {
 			});
 		}
 
-		const startCollector = channel.createMessageCollector({
+		const startCollector = startChannel.createMessageCollector({
 			filter: (msg) => msg.author?.id === interaction.user.id && (msg.content.toLowerCase() === 'endtrivia' || (msg.content.toLowerCase() === 'ready')),
 			time: 180_000
 		});
@@ -224,7 +230,7 @@ module.exports = {
 						startCollector.stop();
 						joinCollector.stop();
 						msg.reply('Game starting... Type `endtrivia` to end the game, `playerlb` to access player scores, `teamlb` to access team scores, and `buzz` to buzz in for a question!');
-						await playGame(channel, teamInfo, players, losePoints, set, questions);
+						await playGame(channel, startChannel, teamInfo, players, losePoints, set, questions);
 						currGames.delete(channel.id);
 					} else {
 						channel.send('Need at least one player to start!');

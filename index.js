@@ -81,6 +81,7 @@ client.on(Events.InteractionCreate, async interaction => {
 				case 'removeset':
 				case 'setinfo':
 				case 'startgame':
+				case 'startvoicegame':
 					// Passes array of set name cache
 					await command.execute(interaction, Object.keys(sets));
 					break;
