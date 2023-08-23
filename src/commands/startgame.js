@@ -150,6 +150,7 @@ module.exports = {
 
 			joinCollector = msg.createMessageComponentCollector({
 				filter: (buttonInteraction) => !buttonInteraction.user.bot,
+				componentType: ComponentType.Button,
 				time: 300_000
 			});
 
@@ -161,6 +162,7 @@ module.exports = {
 				const joined = players.has(player);
 
 				if (joined) {
+					// If the player has already joined, return if it is the same team.
 					const oldTeam = players.get(player)['team'];
 
 					if (oldTeam === newTeam) {
@@ -174,6 +176,7 @@ module.exports = {
 				}
 
 				if (customId === 'leave') {
+					// If the player is in a team, delete them - else, reply that they have not yet joined.
 					players.delete(player);
 
 					return joined ?
@@ -189,6 +192,7 @@ module.exports = {
 						});
 				}
 
+				// Otherwise, process the join and update the embed.
 				teamInfo.get(newTeam).players.add(player);
 				players.set(player, {
 					name: username,
@@ -222,6 +226,7 @@ module.exports = {
 			time: 180_000
 		});
 
+		// Handles chat commands for control flow purposes.
 		startCollector.on('collect', async (msg) => {
 			const lowercaseMsg = msg.content.toLowerCase();
 			switch (lowercaseMsg) {
@@ -243,6 +248,7 @@ module.exports = {
 			}
 		});
 
+		// Cleans up on game timeout or something going wrong.
 		startCollector.on('end', (_, reason) => {
 			switch (reason) {
 				case 'time':
