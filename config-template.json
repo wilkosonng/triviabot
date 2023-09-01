@@ -10,17 +10,22 @@
  * embedColor - Color for the embed highlights. Default: 13719405
  * teams - An array of team names
  * teamEmojis - An array of emoji IDs with a one-to-one association with the team array.
+ * buzzers - file names for the buzzer audio files. buzzer1.ogg, buzzer2.ogg, buzzer3.ogg, buzzer4.ogg by default.
  * threshold - Judgement threshold for answers. The higher, the more lenient. Default: 1.5
-*/
+ */
 
 {
   "clientID": "123456789",
   "embedColor": 13719405,
   "teams": ["Red", "Blue", "Yorange", "Green"],
-  "teamEmojis": [ "1063010029260767272",
-                  "1063010027591450696", 
-                  "1063010115353059338", 
-                  "1118199752253784285"],
+  "teamEmojis": [
+    "1063010029260767272",
+    "1063010027591450696",
+    "1063010115353059338",
+    "1118199752253784285"
+  ],
+
+  "buzzers": ["buzzer1.ogg", "buzzer2.ogg", "buzzer3.ogg", "buzzer4.ogg"],
 
   "threshold": 1.5
 }
