@@ -1,4 +1,4 @@
-const { ref, set, remove } = require('firebase/database');
+const { get, ref, set, remove } = require('firebase/database');
 
 /**
  * Removes the question set data from the Firebase database
@@ -32,6 +32,76 @@ function deleteSet(database, title) {
 */
 function removeWhiteSpace(string) {
 	return string.trim().replaceAll(/\s+/g, ' ');
+}
+
+/**
+ * Resets a given leaderboard
+ * @param {Database} database Database to reset
+ * @param {string} leaderboard Which leaderboard to reset
+ *
+ * @returns {boolean} Whether or not the reset was a success
+*/
+function resetLeaderboard(database, leaderboard) {
+	try {
+		(async () => {
+			// Attempts to reset the given leaderboard
+			await set(ref(database, `leaderboards/${leaderboard}`), '');
+		})();
+	} catch (error) {
+		console.error(error);
+		return false;
+	}
+
+	return true;
+}
+
+/**
+ * Updates a given leaderboard with the result of a game.
+ * @param {Database} database Database to update
+ * @param {Map} result The final results of the game to add to the result
+ *
+ * @returns {boolean} Whether or not the update was a success
+*/
+function updateLeaderboards(database, result) {
+	const leaderboards = ['alltime', 'daily', 'weekly', 'monthly'];
+
+	try {
+		return (async () => {
+			// Attempts to update all leaderboards.
+			return await get(ref(database, 'leaderboards')).then((snapshot) => {
+				if (snapshot.exists()) {
+					const currBoard = snapshot.val();
+					console.log(currBoard);
+					for (const board of leaderboards) {
+						const selectedBoard = currBoard[board] === '' ? new Map() : new Map(Object.entries(currBoard[board]));
+
+						for (const [player, info] of result) {
+							selectedBoard.set(player, selectedBoard.has(player) ? info.score + selectedBoard.get(player) : info.score);
+						}
+
+						const newBoard = [...selectedBoard.entries()].sort((a, b) => b[1] - a[1]);
+
+						currBoard[board] = Object.fromEntries(newBoard);
+					}
+
+					// Attempts to push update.
+					try {
+						(async () => {
+							await set(ref(database, 'leaderboards'), currBoard);
+						})();
+					} catch (error) {
+						console.error(error);
+						return false;
+					}
+
+					return true;
+				}
+			});
+		})();
+	} catch (error) {
+		console.error(error);
+		return false;
+	}
 }
 
 /**
@@ -78,5 +148,5 @@ function uploadSet(database, questionSet, title, description, owner) {
 }
 
 module.exports = {
-	deleteSet, removeWhiteSpace, replaceLineBreaks, uploadSet
+	deleteSet, removeWhiteSpace, replaceLineBreaks, resetLeaderboard, updateLeaderboards, uploadSet
 };

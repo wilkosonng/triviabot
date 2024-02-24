@@ -134,3 +134,6 @@ dist
 # config
 
 config.json
+
+# Generated Audio
+public/audio/questions

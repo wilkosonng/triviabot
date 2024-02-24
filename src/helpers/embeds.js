@@ -38,14 +38,56 @@ function AddSummaryEmbed(title, description, author, questionSet) {
  *
  * @return {EmbedBuilder} The embed to be displayed.
 */
-function BuzzEmbed(playerName, team, client, numAnswers) {
+function BuzzEmbed(playerName, team, client, numAnswers, numSeconds) {
 	const emoji = client.emojis.cache.get(team);
 	const msg = new EmbedBuilder()
 		.setColor(embedColor)
 		.setTitle(`${emoji} ${playerName} has buzzed in! ${emoji}`)
-		.setDescription(`You have ${10 * numAnswers} seconds to answer!`);
+		.setDescription(`You have ${numSeconds * numAnswers} seconds to answer!`);
 
 	return msg;
+}
+
+/**
+ * Generates an embed with leaderboard standings.
+ *
+ * @param {number} page The page of the query requested.
+ * @param {number} maxPage The highest page of the query.
+ * @param {Array} leaderboards The current state of the leaderboards.
+ * @param {String} type The type of leaderboard to display
+ *
+ * @return {EmbedBuilder} The embed to be displayed.
+*/
+function GeneralLeaderboardEmbed(page, maxPage, leaderboards, type) {
+	const typeMap = new Map([
+		['alltime', 'All Time'],
+		['daily', 'Daily'],
+		['weekly', 'Weekly'],
+		['monthly', 'Monthly']
+	]);
+
+	const leftIndex = 10 * (page - 1);
+	const rightIndex = Math.min(10 * page, leaderboards.length);
+	const slice = leaderboards.slice(leftIndex, rightIndex);
+
+	const msg = new EmbedBuilder()
+		.setColor(embedColor)
+		.setTitle(`🏆 ${typeMap.get(type)} Leaderboards 🏆`)
+		.setFooter({ text: `Page ${page} of ${maxPage} ※ Players ${leftIndex + 1} to ${rightIndex}` });
+
+	// If there are no matches played, returns an empty leaderboard.
+	if (slice.length === 0) {
+		return msg.setDescription('No matches played yet! Be the first one on the leaderboard by playing a ranked match!');
+	}
+
+	// Otherwise, fills the embed with the page results.
+	let description = '';
+
+	for (const [player, score] of slice) {
+		description += `${score} points - ${userMention(player)}\n`;
+	}
+
+	return msg.setDescription(description);
 }
 
 /**
@@ -95,7 +137,7 @@ function ListEmbed(page, maxPage, keyword, questionSets) {
 	let description = keyword ? `### > Matching query ${inlineCode(keyword)}\n` : '';
 
 	for (const [title, metadata] of slice) {
-		description += `${inlineCode(title)} - <@${metadata.owner}>\n`;
+		description += `${inlineCode(title)} - ${userMention(metadata.owner)}\n`;
 	}
 
 	return new EmbedBuilder()
@@ -288,6 +330,6 @@ function TeamLeaderboardEmbed(teamInfo) {
 }
 
 module.exports = {
-	AddSummaryEmbed, BuzzEmbed, InfoEmbed, ListEmbed, PlayerLeaderboardEmbed, ResultEmbed,
-	QuestionEmbed, QuestionInfoEmbed, StartEmbed, TeamLeaderboardEmbed
+	AddSummaryEmbed, BuzzEmbed, GeneralLeaderboardEmbed, InfoEmbed, ListEmbed, PlayerLeaderboardEmbed,
+	ResultEmbed, QuestionEmbed, QuestionInfoEmbed, StartEmbed, TeamLeaderboardEmbed
 };

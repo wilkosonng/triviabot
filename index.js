@@ -2,6 +2,8 @@ const { Client, Events, GatewayIntentBits, Collection } = require('discord.js');
 const { initializeApp } = require('firebase/app');
 const { getAuth, signInWithEmailAndPassword, signOut } = require('firebase/auth');
 const { getDatabase, onValue, ref } = require('firebase/database');
+const { scheduleJob } = require('node-schedule');
+const { resetLeaderboard } = require('./src/helpers/helpers.js');
 const fs = require('fs');
 const path = require('path');
 
@@ -12,6 +14,7 @@ const database = getDatabase(firebaseApp);
 const auth = getAuth(firebaseApp);
 
 let sets = {};
+let leaderboards = {};
 
 const client = new Client({
 	intents: [
@@ -54,6 +57,29 @@ client.once(Events.ClientReady, async clientObject => {
 		console.log(Object.keys(sets));
 	});
 
+	// Keeps local cache of the ranked leaderboards
+	onValue(ref(database, 'leaderboards'), (snapshot) => {
+		leaderboards = snapshot.val() ?? {};
+		console.log('Leaderboards Updated!');
+		console.log(leaderboards);
+	});
+
+	// Sets up scheduled leaderboard updates
+	scheduleJob('0 0 * * *', () => {
+		// Resets daily leaderboard
+		resetLeaderboard(database, 'daily');
+	});
+
+	scheduleJob('0 0 * * 0', () => {
+		// Resets weekly leaderboard
+		resetLeaderboard(database, 'weekly');
+	});
+
+	scheduleJob('0 0 1 * *', () => {
+		// Resets monthly leaderboard
+		resetLeaderboard(database, 'monthly');
+	});
+
 	client.user.setActivity('/info to start!');
 	console.log(`Bot ready to test knowledge! Username: ${clientObject.user.username}.`);
 });
@@ -61,8 +87,8 @@ client.once(Events.ClientReady, async clientObject => {
 // Command handler
 client.on(Events.InteractionCreate, async interaction => {
 	if (interaction.isChatInputCommand()) {
-		if (interaction.channel.isDMBased()) {
-			return;
+		if (!interaction.channel) {
+			return interaction.reply('Invalid channel!');
 		}
 
 		const commandName = interaction.commandName;
@@ -89,6 +115,9 @@ client.on(Events.InteractionCreate, async interaction => {
 					// Passes array of set metadata cache
 					await command.execute(interaction, Object.entries(sets));
 					break;
+				case 'leaderboards':
+					await command.execute(interaction, leaderboards);
+					break;
 				case 'info':
 					// Passes in command list
 					await command.execute(interaction, Array.from(client.commands.keys()));
@@ -96,6 +125,7 @@ client.on(Events.InteractionCreate, async interaction => {
 				default:
 					// Otherwise, passes in only interaction
 					await command.execute(interaction);
+					break;
 			}
 		} catch (error) {
 			console.error(error);

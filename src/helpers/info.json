@@ -72,6 +72,20 @@
     ]
   },
 
+  "leaderboards": {
+    "description": "Displays the current ranked game leaderboards.",
+    "fields": [
+      {
+        "name": "Page `(optional)` -",
+        "value": "The page of the list you wish to start at. If left blank, starts at page 1."
+      },
+      {
+        "name": "Type `(optional)` -",
+        "value": "The type of leaderboard to display, which can be changed via additional interactions (either All Time, Daily, Weekly, or Monthly)."
+      }
+    ]
+  },
+
   "listsets": {
     "description": "Provides a page of up to 10 question set name-owner pairs to play. If a query is given, provides up to 10 question set name-owner pairs matching the query.",
     "fields": [
@@ -119,11 +133,15 @@
         "value": "The name of the question set you wish to play. If left blank, chooses a random question set for you. If no matches are found, errors instead."
       },
       {
+        "name": "Ranked `(optional, requires administrator)` -",
+        "value": "Whether or not the game is ranked and counts towards leaderboards ranking. If left blank, unranked by default."
+      },
+      {
         "name": "Shuffle `(optional)` -",
         "value": "Whether or not to shuffle the questions from the original order in the question set. If left blank, shuffles the questions."
       },
       {
-        "name": "teams `(optional)` -",
+        "name": "Teams `(optional)` -",
         "value": "The number of teams you wish to play the game. If left blank, only 1 team is permitted. The number of teams supported are between 1-4 (inclusive)."
       },
       {
@@ -131,7 +149,11 @@
         "value": "Whether or not incorrect answers or timing out of an answer loses points in the game. If left blank, incorrect and answer time outs will lose points."
       },
       {
-        "name": "channel `(optional)` -",
+        "name": "Time `(optional)` -",
+        "value": "The number of seconds between 1-60 to allow for players to answer a question after buzzing in. This is multiplicative per answer part for multi-part quesitons. If left blank, defaults to 10 seconds."
+      },
+      {
+        "name": "Channel `(optional)` -",
         "value": "The channel you wish the game to be played in. Default: the channel you invoke the command in."
       }
     ]

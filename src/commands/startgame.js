@@ -4,6 +4,7 @@ const { initializeApp } = require('firebase/app');
 const { getDatabase, ref, get } = require('firebase/database');
 const { playGame } = require('../game/playgame');
 const { stringSimilarity } = require('string-similarity-js');
+const { updateLeaderboards } = require('../helpers/helpers.js');
 const { StartEmbed } = require('../helpers/embeds.js');
 require('dotenv').config();
 
@@ -43,6 +44,11 @@ module.exports = {
 				.setRequired(false))
 		.addBooleanOption(option =>
 			option
+				.setName('ranked')
+				.setDescription('Ranked game? Ranked games count towards leaderboards. False by default (requires admin).')
+				.setRequired(false))
+		.addBooleanOption(option =>
+			option
 				.setName('shuffle')
 				.setDescription('Shuffle questions? True by default.')
 				.setRequired(false))
@@ -58,12 +64,20 @@ module.exports = {
 				.setName('losepoints')
 				.setDescription('Lose points on wrong answer? True by default.')
 				.setRequired(false))
+		.addIntegerOption(option =>
+			option
+				.setName('time')
+				.setMinValue(1)
+				.setMaxValue(60)
+				.setDescription('Number of seconds (1-60) to answer each question. 10 seconds by default.')
+				.setRequired(false))
 		.addChannelOption(option =>
 			option
 				.setName('channel')
 				.setDescription('Channel to play in. Current channel by default.')
 				.setRequired(false)),
 
+	// Autocompletes question sets
 	async autocomplete(interaction, questionSets) {
 		const focused = interaction.options.getFocused().toLowerCase();
 		const choices = questionSets.filter((set) => set.toLowerCase().startsWith(focused) || stringSimilarity(focused, set) > 0.5);
@@ -75,9 +89,11 @@ module.exports = {
 
 		let set = interaction.options?.getString('questionset');
 		const numTeams = interaction.options?.getInteger('teams') ?? 1;
+		const ranked = interaction.options?.getBoolean('ranked') ?? false;
 		const losePoints = interaction.options?.getBoolean('losepoints') ?? true;
 		const shuffle = interaction.options?.getBoolean('shuffle') ?? true;
 		const channel = interaction.options?.getChannel('channel') ?? interaction.channel;
+		const numSeconds = interaction.options?.getInteger('time') ?? 10;
 		const startChannel = interaction.channel;
 		const teamInfo = new Map();
 		const players = new Map();
@@ -96,6 +112,11 @@ module.exports = {
 
 		if (!channel.permissionsFor(interaction.client.user.id).has(PermissionsBitField.Flags.SendMessages)) {
 			return await interaction.editReply('Error: No permissions to send messages in channel!');
+		}
+
+		// If the game is ranked, checks if the user has permission to start a ranked game.
+		if (ranked) {
+
 		}
 
 		currGames.add(channel.id);
@@ -235,8 +256,14 @@ module.exports = {
 						startCollector.stop();
 						joinCollector.stop();
 						msg.reply('Game starting... Type `endtrivia` to end the game, `playerlb` to access player scores, `teamlb` to access team scores, and `buzz` to buzz in for a question!');
-						await playGame(channel, startChannel, teamInfo, players, losePoints, set, questions);
+						const result = await playGame(channel, startChannel, teamInfo, players, losePoints, numSeconds, set, questions);
 						currGames.delete(channel.id);
+
+						// If the game was ranked, updates the leaderboards.
+						if (ranked) {
+							console.log(players);
+							updateLeaderboards(database, players);
+						}
 					} else {
 						channel.send('Need at least one player to start!');
 					}
