@@ -115,8 +115,8 @@ module.exports = {
 		}
 
 		// If the game is ranked, checks if the user has permission to start a ranked game.
-		if (ranked) {
-
+		if (ranked && !interaction.memberPermissions.has(PermissionsBitField.Flags.Administrator)) {
+			return await interaction.editReply('Error: User does not have permissions to start a ranked game!');
 		}
 
 		currGames.add(channel.id);
