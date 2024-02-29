@@ -1,16 +1,11 @@
 const { SlashCommandBuilder } = require('discord.js');
 const validator = require('validator');
 const puppeteer = require('puppeteer-extra');
-const { initializeApp } = require('firebase/app');
-const { getDatabase } = require('firebase/database');
 const { AddSummaryEmbed } = require('../helpers/embeds.js');
 const { removeWhiteSpace, replaceLineBreaks, uploadSet, deleteSet } = require('../helpers/helpers.js');
 require('dotenv').config();
 
 const quizletRegex = /quizlet\.com\/(?<id>\d+)\/(?<name>[a-z0-9-]+flash-cards)/;
-
-const firebaseApp = initializeApp(JSON.parse(process.env.FIREBASE_CREDS));
-const database = getDatabase(firebaseApp);
 
 const StealthPlugin = require('puppeteer-extra-plugin-stealth');
 puppeteer.use(StealthPlugin());
@@ -43,7 +38,7 @@ module.exports = {
 				.setDescription('Flip the questions and answers? (default: false)')
 				.setRequired(false)),
 
-	async execute(interaction, currSets) {
+	async execute(interaction, database, currSets) {
 		await interaction.deferReply();
 
 		const title = removeWhiteSpace(interaction.options.getString('title'));

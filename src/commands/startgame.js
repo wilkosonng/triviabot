@@ -1,16 +1,12 @@
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType, SlashCommandBuilder, PermissionsBitField } = require('discord.js');
 const { teams, teamEmojis } = require('../../config.json');
-const { initializeApp } = require('firebase/app');
-const { getDatabase, ref, get } = require('firebase/database');
+const { ref, get } = require('firebase/database');
 const { playGame } = require('../game/playgame');
 const { stringSimilarity } = require('string-similarity-js');
 const { updateLeaderboards } = require('../helpers/helpers.js');
 const { StartEmbed } = require('../helpers/embeds.js');
-require('dotenv').config();
 
-const firebaseApp = initializeApp(JSON.parse(process.env.FIREBASE_CREDS));
-const database = getDatabase(firebaseApp);
-const currGames = new Set();
+require('dotenv').config();
 
 // Sets up action rows for joining the game
 const rows = [new ActionRowBuilder()];
@@ -84,7 +80,7 @@ module.exports = {
 		await interaction.respond(choices.map((set) => ({ name: set, value: set })));
 	},
 
-	async execute(interaction, currSets) {
+	async execute(interaction, database, currSets, currGames) {
 		await interaction.deferReply();
 
 		let set = interaction.options?.getString('questionset');
@@ -120,6 +116,7 @@ module.exports = {
 		}
 
 		currGames.add(channel.id);
+
 		for (let i = 0; i < numTeams; i++) {
 			teamInfo.set(teamEmojis[i], {
 				name: teams[i],
@@ -256,12 +253,11 @@ module.exports = {
 						startCollector.stop();
 						joinCollector.stop();
 						msg.reply('Game starting... Type `endtrivia` to end the game, `playerlb` to access player scores, `teamlb` to access team scores, and `buzz` to buzz in for a question!');
-						const result = await playGame(channel, startChannel, teamInfo, players, losePoints, numSeconds, set, questions);
+						await playGame(channel, startChannel, teamInfo, players, losePoints, numSeconds, set, questions);
 						currGames.delete(channel.id);
 
 						// If the game was ranked, updates the leaderboards.
 						if (ranked) {
-							console.log(players);
 							updateLeaderboards(database, players);
 						}
 					} else {

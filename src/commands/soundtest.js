@@ -1,33 +1,38 @@
 const { SlashCommandBuilder } = require('discord.js');
 const { NoSubscriberBehavior, VoiceConnectionStatus, AudioPlayerStatus, StreamType, createAudioPlayer, createAudioResource, entersState, joinVoiceChannel, getVoiceConnection } = require('@discordjs/voice');
 const { buzzers } = require('../../config.json');
-const { createReadStream } = require('node:fs');
 const path = require('path');
-const { Readable, PassThrough } = require('stream');
-const { AudioConfig, SpeechConfig, SpeechSynthesizer, SpeechSynthesisOutputFormat } = require('microsoft-cognitiveservices-speech-sdk');
+const { Readable } = require('stream');
+const { TextToSpeechClient } = require('@google-cloud/text-to-speech');
 require('dotenv').config();
 
 const audioFolder = path.join(__dirname, '../..', 'public', 'audio');
-const speechConfig = SpeechConfig.fromSubscription(process.env.AZURE_KEY, process.env.AZURE_REGION);
-const audioConfig = AudioConfig.fromAudioFileOutput(path.join(audioFolder, 'questions', 'quesiton1.ogg'));
 
-speechConfig.SpeechSynthesisVoiceName = 'en-US-DavisNeural';
+// Initializes TTS API access
+const ttsClient = new TextToSpeechClient({ credentials: JSON.parse(process.env.GOOGLE_CREDS) });
 
 module.exports = {
 	data: new SlashCommandBuilder()
-		.setName('buzzercheck')
-		.setDescription('Check buzzers'),
+		.setName('soundtest')
+		.setDescription('Tests sound')
+		.addStringOption(option =>
+			option
+				.setName('text')
+				.setDescription('What text to speak?')
+				.setRequired(true)),
 
 	async execute(interaction) {
+		const text = interaction.options.getString('text');
 		const user = await interaction.member.fetch();
 		const channel = user.voice?.channel;
 
 		if (!channel) {
-			return interaction.reply('Not in a channel!');
+			return interaction.reply('You must be in a voice channel in order to use this command!');
 		}
 
 		await interaction.deferReply();
-		const buzzerCheck = createAudioPlayer({
+
+		const player = createAudioPlayer({
 			behaviors: {
 				noSubscriber: NoSubscriberBehavior.Pause,
 			},
@@ -39,15 +44,17 @@ module.exports = {
 			adapterCreator: channel.guild.voiceAdapterCreator,
 		});
 
-		connection.subscribe(buzzerCheck);
+		connection.subscribe(player);
 
-		connection.on(VoiceConnectionStatus.Ready, () => {
+		connection.on(VoiceConnectionStatus.Ready, async () => {
 			console.log('ready');
 
-			buzzerCheck.on(AudioPlayerStatus.Idle, () => {
-				synthesize('Question 1', speechConfig, audioConfig);
-				connection.destroy();
+			const [response] = await ttsClient.synthesizeSpeech({
+				input: { text: text },
+				voice: { languageCode: 'en-US', name: 'en-US-Standard-J', ssmlGender: 'MALE' },
+				audioConfig: { audioEncoding: 'OGG_OPUS' },
 			});
+			player.play(createAudioResource(Readable.from(response.audioContent)));
 		});
 
 		connection.on(VoiceConnectionStatus.Disconnected, async () => {
@@ -64,26 +71,3 @@ module.exports = {
 		});
 	}
 };
-
-async function synthesize(text, speech, audio) {
-	const synthesizer = new SpeechSynthesizer(speech, audio);
-
-	synthesizer.speakTextAsync(text,
-		(res) => {
-			console.log('Synthesized!');
-			const { audioData } = res;
-			const bufferStream = new PassThrough();
-			bufferStream.end(Buffer.from(audioData));
-			synthesizer.close();
-		},
-		(err) => {
-			console.log(err);
-			synthesizer.close();
-		});
-}
-
-function playNextState(player, num) {
-	player.play(createAudioResource(createReadStream(path.join(audioFolder, 'buzzers', buzzers[num]))), {
-		inputType: StreamType.OggOpus
-	});
-}

@@ -9,13 +9,22 @@ const path = require('path');
 
 require('dotenv').config();
 
+// Prerequisite firebase references
 const firebaseApp = initializeApp(JSON.parse(process.env.FIREBASE_CREDS));
 const database = getDatabase(firebaseApp);
 const auth = getAuth(firebaseApp);
 
+// Cached copies of question sets and leaderboards.
 let sets = {};
 let leaderboards = {};
 
+// Channels with a current ongoing game (voice/text)
+const channels = new Set();
+
+// Guilds with a current ongoing voice game
+const guilds = new Set();
+
+// Bot client
 const client = new Client({
 	intents: [
 		GatewayIntentBits.Guilds,
@@ -106,10 +115,16 @@ client.on(Events.InteractionCreate, async interaction => {
 				case 'addsheet':
 				case 'removeset':
 				case 'setinfo':
-				case 'startgame':
-				case 'startvoicegame':
 					// Passes array of set name cache
-					await command.execute(interaction, Object.keys(sets));
+					await command.execute(interaction, database, Object.keys(sets));
+					break;
+				case 'startgame':
+					// Passes array of set name cache and active channels.
+					await command.execute(interaction, database, Object.keys(sets), channels);
+					break;
+				case 'startvoicegame':
+					// Passes array of set name cache and active channels and guilds.
+					await command.execute(interaction, database, Object.keys(sets), channels, guilds);
 					break;
 				case 'listsets':
 					// Passes array of set metadata cache

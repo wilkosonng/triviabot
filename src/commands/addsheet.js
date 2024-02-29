@@ -1,17 +1,12 @@
 const { SlashCommandBuilder } = require('discord.js');
 const validator = require('validator');
 const sheets = require('google-spreadsheet');
-const { initializeApp } = require('firebase/app');
-const { getDatabase } = require('firebase/database');
 const { AddSummaryEmbed } = require('../helpers/embeds.js');
 const { removeWhiteSpace, uploadSet, deleteSet } = require('../helpers/helpers.js');
 require('dotenv').config();
 
 const sheetsRegex = /docs\.google\.com\/spreadsheets(\/u\/\d)?\/d\/(?<id>[\w-]+)\//;
-const questionRegex = /^(!!img\[(?<img>https?:\/\/(?:www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\+.~#?&\/=]*)\.(png|jpg|jpeg|gif|webp))\])?(?<question>(This is an? (?<ansnum>[2-9]) part question\. )?.+)$/i;
-
-const firebaseApp = initializeApp(JSON.parse(process.env.FIREBASE_CREDS));
-const database = getDatabase(firebaseApp);
+const questionRegex = /^(!!img\[(?<img>https?:\/\/(?:www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\+.~#?&\/=]*)\.(png|jpg|jpeg|gif|webp))\])?(?<question>(This is an? (?<ansnum>[2-9]) part question\. )?.{1, 1000})$/i;
 
 module.exports = {
 	data: new SlashCommandBuilder()
@@ -33,7 +28,7 @@ module.exports = {
 				.setDescription('Google Sheets URL of the question set')
 				.setRequired(true)),
 
-	async execute(interaction, currSets) {
+	async execute(interaction, database, currSets) {
 		await interaction.deferReply();
 
 		const title = removeWhiteSpace(interaction.options.getString('title'));
@@ -135,6 +130,8 @@ module.exports = {
 						content: `Failed to add question at row ${row.rowIndex}: invalid question.`,
 					});
 				}
+
+				// Asserts question is within the limit
 
 				const ansNum = questionMatch.groups.ansnum ? parseInt(questionMatch.groups.ansnum) : 1;
 

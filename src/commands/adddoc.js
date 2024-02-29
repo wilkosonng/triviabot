@@ -1,15 +1,10 @@
 const { SlashCommandBuilder } = require('discord.js');
-const { initializeApp } = require('firebase/app');
-const { getDatabase } = require('firebase/database');
 const { AddSummaryEmbed } = require('../helpers/embeds.js');
 const { removeWhiteSpace, uploadSet, deleteSet } = require('../helpers/helpers.js');
 const mammoth = require('mammoth');
 require('dotenv').config();
 
-const questionRegex = /^(!!img\[(?<img>https?:\/\/(?:www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\+.~#?&\/=]*)\.(png|jpg|jpeg|gif|webp))\])?Q: (?<question>(This is an? (?<ansnum>[2-9]) part question\. )?[^\n]+)$\s+^A: (?<answers>[^\n]+)$/gim;
-
-const firebaseApp = initializeApp(JSON.parse(process.env.FIREBASE_CREDS));
-const database = getDatabase(firebaseApp);
+const questionRegex = /^(!!img\[(?<img>https?:\/\/(?:www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\+.~#?&\/=]*)\.(png|jpg|jpeg|gif|webp))\])?Q: (?<question>(This is an? (?<ansnum>[2-9]) part question\. )?[^\n]+)$\s{1, 1000}^A: (?<answers>[^\n]+)$/gim;
 
 module.exports = {
 	data: new SlashCommandBuilder()
@@ -31,7 +26,7 @@ module.exports = {
 				.setDescription('The .docx file of the question set')
 				.setRequired(true)),
 
-	async execute(interaction, currSets) {
+	async execute(interaction, database, currSets) {
 		await interaction.deferReply();
 
 		const title = removeWhiteSpace(interaction.options.getString('title'));

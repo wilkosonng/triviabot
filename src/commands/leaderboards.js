@@ -39,6 +39,7 @@ module.exports = {
 					{ name: 'Monthly', value: 'monthly' },
 					{ name: 'All Time', value: 'alltime' }
 				)),
+
 	async execute(interaction, leaderboards) {
 		let type = interaction.options.getString('type') ?? 'alltime';
 		let currIndex = nav.indexOf(type);
