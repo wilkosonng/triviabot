@@ -1,12 +1,7 @@
 const { SlashCommandBuilder, PermissionsBitField } = require('discord.js');
-const { initializeApp } = require('firebase/app');
-const { getDatabase, ref, get } = require('firebase/database');
 const { stringSimilarity } = require('string-similarity-js');
 const { deleteSet } = require('../helpers/helpers');
 require('dotenv').config;
-
-const firebaseApp = initializeApp(JSON.parse(process.env.FIREBASE_CREDS));
-const database = getDatabase(firebaseApp);
 
 module.exports = {
 	data: new SlashCommandBuilder()
@@ -19,7 +14,7 @@ module.exports = {
 				.setRequired(true)
 				.setAutocomplete(true)),
 
-	async autocomplete(interaction, questionSets) {
+	async autocomplete(interaction, database, questionSets) {
 		const focused = interaction.options.getFocused().toLowerCase();
 		const choices = questionSets.filter((set) => set.toLowerCase().startsWith(focused) || stringSimilarity(focused, set) > 0.5);
 		await interaction.respond(choices.map((set) => ({ name: set, value: set })));
