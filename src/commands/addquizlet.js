@@ -136,8 +136,9 @@ async function scrapeSet(url, flip) {
 	});
 
 	// Makes sure we get every term.
-	while (await page.$('button[aria-label="See more"]') != null) {
+	while ((await page.$('button[aria-label="See more"]')) != null) {
 		await page.click('button[aria-label="See more"]');
+		await new Promise(r => setTimeout(r, 100));
 	}
 
 	await page.addScriptTag({ content: `${removeWhiteSpace} ${replaceLineBreaks}` });
