@@ -1,4 +1,5 @@
 const { SlashCommandBuilder, PermissionsBitField } = require('discord.js');
+const { ref, get } = require('firebase/database');
 const { stringSimilarity } = require('string-similarity-js');
 const { deleteSet } = require('../helpers/helpers');
 require('dotenv').config;
@@ -20,7 +21,7 @@ module.exports = {
 		await interaction.respond(choices.map((set) => ({ name: set, value: set })));
 	},
 
-	async execute(interaction, database, currSets) {
+	async execute(interaction, currSets) {
 		await interaction.deferReply();
 
 		const title = interaction.options.getString('title');
