@@ -1,5 +1,5 @@
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType, SlashCommandBuilder, PermissionsBitField } = require('discord.js');
-const { NoSubscriberBehavior, VoiceConnectionStatus, AudioPlayerStatus, StreamType, createAudioPlayer, createAudioResource, entersState, joinVoiceChannel, getVoiceConnection } = require('@discordjs/voice');
+const { NoSubscriberBehavior, VoiceConnectionStatus, createAudioPlayer, entersState, joinVoiceChannel, getVoiceConnection } = require('@discordjs/voice');
 const { teams, teamEmojis } = require('../../config.json');
 const { playVoiceGame } = require('../game/playvoicegame');
 const { awaitAudioPlayerReady, randomize, updateLeaderboards } = require('../helpers/helpers');

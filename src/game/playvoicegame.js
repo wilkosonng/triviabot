@@ -5,7 +5,8 @@ const { join } = require('path');
 const { awaitAudioPlayerReady, judgeAnswer } = require('../helpers/helpers');
 const { BuzzEmbed, PlayerLeaderboardEmbed, ResultEmbed, VoiceQuestionEmbed, TeamLeaderboardEmbed } = require('../helpers/embeds');
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType } = require('discord.js');
-const { AudioPlayerStatus, StreamType, createAudioResource } = require('@discordjs/voice');
+const { StreamType, createAudioResource } = require('@discordjs/voice');
+const { getAudioDurationInSeconds } = require('get-audio-duration');
 
 const audioFolder = join(__dirname, '../..', 'public', 'audio');
 
@@ -18,14 +19,25 @@ const buzzActionRow = new ActionRowBuilder()
 			.setStyle(ButtonStyle.Primary)
 			.setEmoji(teamEmojis[0]));
 
+// Prepares constant audio files
 const buzzersFiles = buzzers.map((e) => join(audioFolder, e));
 const teamFiles = teams.map((e) => join(audioFolder, `${e.toLowerCase()}team.ogg`));
 const emojiMap = new Map(teamEmojis.map((e, i) => [e, i]));
 
-const incorrectSound = join(audioFolder, 'incorrect.ogg');
 const correctSound = join(audioFolder, 'correct.ogg');
+const incorrectSound = join(audioFolder, 'incorrect.ogg');
 const timeSound = join(audioFolder, 'time.ogg');
 const nobuzzSound = join(audioFolder, 'nobuzz.ogg');
+
+// Prepares duration measurements of constant files
+let correctDuration, incorrectDuration, timeDuration, nobuzzDuration;
+
+(async () => {
+	incorrectDuration = Math.round((await getAudioDurationInSeconds(incorrectSound)) * 1_000);
+	correctDuration = Math.round((await getAudioDurationInSeconds(correctSound)) * 1_000);
+	timeDuration = Math.round((await getAudioDurationInSeconds(timeSound)) * 1_000);
+	nobuzzDuration = Math.round((await getAudioDurationInSeconds(nobuzzSound)) * 1_000);
+});
 
 // Starts the game passed through.
 async function playVoiceGame(channel, startChannel, teamInfo, players, losePoints, numSeconds, set, questions, description, connection, audioPlayer, ttsClient, setPath) {
@@ -90,6 +102,9 @@ async function playVoiceGame(channel, startChannel, teamInfo, players, losePoint
 		// Make sure there is nothing playing before beginning the next question.
 		await awaitAudioPlayerReady(audioPlayer);
 
+		// Wait to account for latency and distance between questions.
+		await new Promise(r => setTimeout(r, 4_000));
+
 		// Asks a new question and sends it in the channel.
 		const [questionId, nextQuestion] = questions.shift();
 		const questionEmbed = VoiceQuestionEmbed(set, questionNumber, nextQuestion);
@@ -99,13 +114,14 @@ async function playVoiceGame(channel, startChannel, teamInfo, players, losePoint
 			components: [buzzActionRow]
 		});
 
-		speakQuestion(ttsClient, audioPlayer, questionId, questionNumber, questionStarted, setPath);
+		let resultDuration = 0;
+		const questionDuration = await speakQuestion(ttsClient, audioPlayer, questionId, questionNumber, questionStarted, setPath);
 
 		try {
 			// After the question is sent, look for a player buzz.
 			const buzz = await msg.awaitMessageComponent({
 				filter: (i) => players.has(i.user.id) && questionStarted[0],
-				time: 20_000,
+				time: 15_000 + questionDuration,
 				componenentType: ComponentType.Button
 			});
 
@@ -142,7 +158,7 @@ async function playVoiceGame(channel, startChannel, teamInfo, players, losePoint
 					players.get(answerer.id).score++;
 					teamInfo.get(answerTeam).score++;
 
-					speakResult(audioPlayer, 'correct', questionId, setPath);
+					resultDuration = await speakResult(audioPlayer, 'correct', questionId, setPath);
 
 					await channel.send({
 						embeds: [ResultEmbed('correct', nextQuestion, losePoints, answerer.username, ans)]
@@ -153,7 +169,7 @@ async function playVoiceGame(channel, startChannel, teamInfo, players, losePoint
 						teamInfo.get(answerTeam).score--;
 					}
 
-					speakResult(audioPlayer, 'incorrect', questionId, setPath);
+					resultDuration = await speakResult(audioPlayer, 'incorrect', questionId, setPath);
 
 					await channel.send({
 						embeds: [ResultEmbed('incorrect', nextQuestion, losePoints, answerer.username, ans)]
@@ -166,7 +182,7 @@ async function playVoiceGame(channel, startChannel, teamInfo, players, losePoint
 					teamInfo.get(answerTeam).score--;
 				}
 
-				speakResult(audioPlayer, 'time', questionId, setPath);
+				resultDuration = await speakResult(audioPlayer, 'time', questionId, setPath);
 
 				await channel.send({
 					embeds: [ResultEmbed('time', nextQuestion, losePoints, answerer.username)]
@@ -178,14 +194,16 @@ async function playVoiceGame(channel, startChannel, teamInfo, players, losePoint
 				components: []
 			});
 
-			speakResult(audioPlayer, 'nobuzz', questionId, setPath);
+			resultDuration = await speakResult(audioPlayer, 'nobuzz', questionId, setPath);
 
 			await channel.send({
 				embeds: [ResultEmbed('nobuzz', nextQuestion, losePoints, null, null)]
 			});
 		}
 
-		await new Promise(r => setTimeout(r, 3_000));
+		// Wait for result to finish
+		await new Promise(r => setTimeout(r, resultDuration));
+
 		questionNumber++;
 		questionStarted[0] = false;
 	}
@@ -199,6 +217,7 @@ async function playVoiceGame(channel, startChannel, teamInfo, players, losePoint
 		embeds: [TeamLeaderboardEmbed(teamInfo), PlayerLeaderboardEmbed(players)]
 	});
 
+	await new Promise(r => setTimeout(r, 10_000));
 
 	function endGame() {
 		ended = true;
@@ -212,7 +231,7 @@ async function prepareNextQuestions(ttsClient, questions, questionNumber, path) 
 	if (questionNumber === 1) {
 		// If it is the first batch, then use first 10 questions
 		start = 0;
-		stop = Math.min(questions.length, 9) + 1;
+		stop = Math.min(questions.length, 10);
 	} else {
 		// Otherwise, prepare the next 10 questions
 		if (questions.length < 6) {
@@ -220,7 +239,7 @@ async function prepareNextQuestions(ttsClient, questions, questionNumber, path) 
 			return;
 		}
 		start = 6;
-		stop = Math.min(questions.length, 15) + 1;
+		stop = Math.min(questions.length, 16);
 	}
 
 	// Generates the next question and answer pairs.
@@ -265,13 +284,15 @@ async function speakQuestion(ttsClient, audioPlayer, questionId, questionNumber,
 	const questionPath = join(path, `question${questionId}.ogg`);
 
 	await synthesizeAsync(ttsClient, `Question ${questionNumber}`, questionNumberPath);
-	audioPlayer.play(createAudioResource(questionNumberPath), { inputType: StreamType.OggOpus });
+	audioPlayer.play(createAudioResource(questionNumberPath, { inputType: StreamType.OggOpus }));
 
 	awaitAudioPlayerReady(audioPlayer, async () => {
 		await new Promise(r => setTimeout(r, 500));
 		audioPlayer.play(createAudioResource(questionPath, { inputType: StreamType.OggOpus }));
 		questionStarted[0] = true;
 	});
+
+	return Math.round((await getAudioDurationInSeconds(questionPath)) * 1_000);
 }
 
 function speakBuzz(audioPlayer, team) {
@@ -284,12 +305,14 @@ function speakBuzz(audioPlayer, team) {
 	});
 }
 
-function speakResult(audioPlayer, result, questionId, path) {
+async function speakResult(audioPlayer, result, questionId, path) {
 	const answerPath = join(path, `answer${questionId}.ogg`);
-
+	const answerDuration = Math.round((await getAudioDurationInSeconds(answerPath)) * 1_000);
+	let totalDuration = 0;
 	switch (result) {
 		case 'correct':
 			audioPlayer.play(createAudioResource(correctSound, { inputType: StreamType.OggOpus }));
+			totalDuration += correctDuration;
 			break;
 		case 'incorrect':
 			audioPlayer.play(createAudioResource(incorrectSound, { inputType: StreamType.OggOpus }));
@@ -297,6 +320,7 @@ function speakResult(audioPlayer, result, questionId, path) {
 				await new Promise(r => setTimeout(r, 200));
 				audioPlayer.play(createAudioResource(answerPath, { inputType: StreamType.OggOpus }));
 			});
+			totalDuration += answerDuration + incorrectDuration + 200;
 			break;
 		case 'time':
 			audioPlayer.play(createAudioResource(timeSound, { inputType: StreamType.OggOpus }));
@@ -304,6 +328,7 @@ function speakResult(audioPlayer, result, questionId, path) {
 				await new Promise(r => setTimeout(r, 200));
 				audioPlayer.play(createAudioResource(answerPath, { inputType: StreamType.OggOpus }));
 			});
+			totalDuration += answerDuration + timeDuration + 200;
 			break;
 		case 'nobuzz':
 			audioPlayer.play(createAudioResource(nobuzzSound, { inputType: StreamType.OggOpus }));
@@ -311,8 +336,11 @@ function speakResult(audioPlayer, result, questionId, path) {
 				await new Promise(r => setTimeout(r, 200));
 				audioPlayer.play(createAudioResource(answerPath, { inputType: StreamType.OggOpus }));
 			});
+			totalDuration += answerDuration + nobuzzDuration + 200;
 			break;
 	}
+
+	return totalDuration;
 }
 
 module.exports = {

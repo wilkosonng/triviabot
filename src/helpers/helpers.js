@@ -21,12 +21,12 @@ function answerThreshold(str) {
  * @returns {Promise<null>} A promise once the audio player becomes idle.
  */
 async function awaitAudioPlayerReady(audioPlayer, callback = () => ({ })) {
-	return new Promise(resolve => {
+	return new Promise(async (resolve) => {
 		if (audioPlayer?.state?.status === AudioPlayerStatus.Idle) {
 			callback();
 			resolve(null);
 		} else {
-			audioPlayer.once(AudioPlayerStatus.Idle, () => {
+			audioPlayer.once(AudioPlayerStatus.Idle, async () => {
 				callback();
 				resolve(null);
 			});

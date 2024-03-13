@@ -20,6 +20,7 @@
     "dotenv": "^16.0.3",
     "ffmpeg-static": "^5.1.0",
     "firebase": "^10.0.0",
+    "get-audio-duration": "^4.0.1",
     "google-spreadsheet": "^3.3.0",
     "mammoth": "^1.6.0",
     "microsoft-cognitiveservices-speech-sdk": "^1.30.1",
