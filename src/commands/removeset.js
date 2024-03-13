@@ -14,13 +14,13 @@ module.exports = {
 				.setRequired(true)
 				.setAutocomplete(true)),
 
-	async autocomplete(interaction, database, questionSets) {
+	async autocomplete(interaction, questionSets) {
 		const focused = interaction.options.getFocused().toLowerCase();
 		const choices = questionSets.filter((set) => set.toLowerCase().startsWith(focused) || stringSimilarity(focused, set) > 0.5);
 		await interaction.respond(choices.map((set) => ({ name: set, value: set })));
 	},
 
-	async execute(interaction, currSets) {
+	async execute(interaction, database, currSets) {
 		await interaction.deferReply();
 
 		const title = interaction.options.getString('title');
