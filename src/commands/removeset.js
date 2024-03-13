@@ -21,7 +21,7 @@ module.exports = {
 		await interaction.respond(choices.map((set) => ({ name: set, value: set })));
 	},
 
-	async execute(interaction, currSets) {
+	async execute(interaction, database, currSets) {
 		await interaction.deferReply();
 
 		const title = interaction.options.getString('title');
