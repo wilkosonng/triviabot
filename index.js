@@ -1,4 +1,5 @@
 const { Client, Events, GatewayIntentBits, Collection } = require('discord.js');
+const { getVoiceConnection } = require('@discordjs/voice');
 const { initializeApp } = require('firebase/app');
 const { getAuth, signInWithEmailAndPassword, signOut } = require('firebase/auth');
 const { getDatabase, onValue, ref } = require('firebase/database');
@@ -175,6 +176,12 @@ client.on(Events.InteractionCreate, async interaction => {
 // Makes sure the bot exits cleanly
 process.on('uncaughtException', (error) => {
 	console.error(error);
+	for (const guildId of guilds) {
+		const connection = getVoiceConnection(guildId);
+		if (connection) {
+			connection.destroy();
+		}
+	}
 	process.exit(1);
 });
 

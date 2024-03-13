@@ -2,7 +2,7 @@ const { SlashCommandBuilder, PermissionsBitField } = require('discord.js');
 const { initializeApp } = require('firebase/app');
 const { getDatabase, ref, get } = require('firebase/database');
 const { stringSimilarity } = require('string-similarity-js');
-const { deleteSet } = require('../helpers/helpers.js');
+const { deleteSet } = require('../helpers/helpers');
 require('dotenv').config;
 
 const firebaseApp = initializeApp(JSON.parse(process.env.FIREBASE_CREDS));

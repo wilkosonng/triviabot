@@ -1,4 +1,38 @@
+const { threshold } = require('../../config.json');
+const { stringSimilarity } = require('string-similarity-js');
+const { AudioPlayer, AudioPlayerStatus } = require('@discordjs/voice');
 const { get, ref, set, remove } = require('firebase/database');
+
+/**
+ * Defines a tolerance for how similar a submission must be to an answer to be "correct"
+ * @param {string} str The string to base the threshold on
+ *
+ * @returns {number} A threshold from 0 to 1 that dicates how close a string must be to be correct.
+ */
+function answerThreshold(str) {
+	return 0.95 * Math.pow(Math.E, -(threshold / str.length));
+}
+
+/**
+ * Waits for the audio player to reach the idle state, then executes the callback.
+ * @param {AudioPlayer} audioPlayer
+ * @param {function} callback The callback once the audio player has become idle.
+ *
+ * @returns {Promise<null>} A promise once the audio player becomes idle.
+ */
+async function awaitAudioPlayerReady(audioPlayer, callback = () => ({ })) {
+	return new Promise(resolve => {
+		if (audioPlayer?.state?.status === AudioPlayerStatus.Idle) {
+			callback();
+			resolve(null);
+		} else {
+			audioPlayer.once(AudioPlayerStatus.Idle, () => {
+				callback();
+				resolve(null);
+			});
+		}
+	});
+}
 
 /**
  * Removes the question set data from the Firebase database
@@ -22,6 +56,54 @@ function deleteSet(database, title) {
 	}
 
 	return true;
+}
+
+/**
+ * Judges a response for correctness based on string similarity
+ * @param {Object} question The original question to be judged.
+ * @param {Array} response The list of player responses.
+ *
+ * @returns {boolean} Whether or not the response is considered correct.
+ */
+function judgeAnswer(question, response) {
+	const answers = [...question.answer];
+
+	if (question.multi > 1) {
+		// If the question is a multi-part question, judges all parts.
+		let correct = 0;
+		for (const res of response.values()) {
+			if (answers.some((ans) => {
+				if (stringSimilarity(ans, res.content) > answerThreshold(ans)) {
+					answers.splice(answers.indexOf(ans), 1);
+					return true;
+				}
+				return false;
+			})) {
+				correct++;
+			}
+
+			if (correct === question.multi) {
+				return true;
+			}
+		}
+		return false;
+	} else {
+		// For single-part questions, simply returns if the response is close enough to one of the answers.
+		return answers.some((ans) => {
+			return stringSimilarity(ans, response.first().content) > answerThreshold(ans);
+		});
+	}
+}
+
+/**
+ * Randomizes a given array in-place.
+ * @param {Array} arr Array to be randomized
+*/
+function randomize(arr) {
+	for (let i = arr.length - 1; i > 0; --i) {
+		const j = Math.random() * (i + 1) | 0;
+		[arr[i], arr[j]] = [arr[j], arr[i]];
+	}
 }
 
 /**
@@ -148,5 +230,5 @@ function uploadSet(database, questionSet, title, description, owner) {
 }
 
 module.exports = {
-	deleteSet, removeWhiteSpace, replaceLineBreaks, resetLeaderboard, updateLeaderboards, uploadSet
+	awaitAudioPlayerReady, deleteSet, judgeAnswer, randomize, removeWhiteSpace, replaceLineBreaks, resetLeaderboard, updateLeaderboards, uploadSet
 };

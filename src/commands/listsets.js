@@ -1,6 +1,6 @@
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType, SlashCommandBuilder } = require('discord.js');
 const { stringSimilarity } = require('string-similarity-js');
-const { ListEmbed } = require('../helpers/embeds.js');
+const { ListEmbed } = require('../helpers/embeds');
 
 const navRow = new ActionRowBuilder()
 	.setComponents(

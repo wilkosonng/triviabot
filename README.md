@@ -33,7 +33,7 @@ In order to host this bot, you will need the following services:
 2. [Discord Bot Token](https://discordjs.guide/preparations/setting-up-a-bot-application.html#creating-your-bot) via Discord's developer portal.
 3. [Firebase Realtime Database](https://console.firebase.google.com/) account and credentials.
 4. The above database should be [configured to handle logins via E-mail and Password](https://firebase.google.com/docs/auth/web/password-auth#before_you_begin). You will need the associated E-mail and Password Authentication for the Realtime Database instance.
-5. [Google Service Account and Credentials](https://console.cloud.google.com/).
+5. [Google Service Account and Credentials](https://console.cloud.google.com/). **NOTE** - if you want the bot to be able to play voice games, you may need to link payment information to this account.
 
 ### Instructions
 
@@ -43,7 +43,7 @@ In order to host this bot, you will need the following services:
 4. Create a `.env` file in the directory and fill in the following variables:
    - `TRIVIA_BOT_TOKEN` - Your bot token.
    - `FIREBASE_CREDS` - The string representation of your Firebase credentials.
-   - `GOOGLE_CREDS` - The string representation of your Google service Account credentials.
+   - `GOOGLE_CREDS` - The string representation of your Google Service Account credentials.
    - `FIREBASE_EMAIL` - The email associated with your Firebase database access.
    - `FIREBASE_PASSWORD` - The password associated with your Firebase database access.
 5. Run `npm run deploy` in your shell window.

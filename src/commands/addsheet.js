@@ -1,8 +1,8 @@
 const { SlashCommandBuilder } = require('discord.js');
 const validator = require('validator');
 const sheets = require('google-spreadsheet');
-const { AddSummaryEmbed } = require('../helpers/embeds.js');
-const { removeWhiteSpace, uploadSet, deleteSet } = require('../helpers/helpers.js');
+const { AddSummaryEmbed } = require('../helpers/embeds');
+const { removeWhiteSpace, uploadSet, deleteSet } = require('../helpers/helpers');
 require('dotenv').config();
 
 const sheetsRegex = /docs\.google\.com\/spreadsheets(\/u\/\d)?\/d\/(?<id>[\w-]+)\//;

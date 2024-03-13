@@ -3,8 +3,8 @@ const { teams, teamEmojis } = require('../../config.json');
 const { ref, get } = require('firebase/database');
 const { playGame } = require('../game/playgame');
 const { stringSimilarity } = require('string-similarity-js');
-const { updateLeaderboards } = require('../helpers/helpers.js');
-const { StartEmbed } = require('../helpers/embeds.js');
+const { updateLeaderboards, randomize } = require('../helpers/helpers');
+const { StartEmbed } = require('../helpers/embeds');
 
 require('dotenv').config();
 
@@ -291,14 +291,6 @@ module.exports = {
 			startCollector.stop();
 			joinCollector.stop();
 			currGames.delete(channel.id);
-		}
-
-		// Defines a shuffle algorithm to randomize questions.
-		function randomize(arr) {
-			for (let i = arr.length - 1; i > 0; --i) {
-				const j = Math.random() * (i + 1) | 0;
-				[arr[i], arr[j]] = [arr[j], arr[i]];
-			}
 		}
 
 		await interaction.editReply('Game successfully started! Type \`ready\` once all users have joined or \`endtrivia\` to end the game!');

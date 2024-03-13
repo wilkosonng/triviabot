@@ -1,6 +1,6 @@
 const { SlashCommandBuilder } = require('discord.js');
-const { AddSummaryEmbed } = require('../helpers/embeds.js');
-const { removeWhiteSpace, uploadSet, deleteSet } = require('../helpers/helpers.js');
+const { AddSummaryEmbed } = require('../helpers/embeds');
+const { removeWhiteSpace, uploadSet, deleteSet } = require('../helpers/helpers');
 const mammoth = require('mammoth');
 require('dotenv').config();
 

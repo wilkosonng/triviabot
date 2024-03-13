@@ -1,8 +1,8 @@
 const { SlashCommandBuilder } = require('discord.js');
 const validator = require('validator');
 const puppeteer = require('puppeteer-extra');
-const { AddSummaryEmbed } = require('../helpers/embeds.js');
-const { removeWhiteSpace, replaceLineBreaks, uploadSet, deleteSet } = require('../helpers/helpers.js');
+const { AddSummaryEmbed } = require('../helpers/embeds');
+const { removeWhiteSpace, replaceLineBreaks, uploadSet, deleteSet } = require('../helpers/helpers');
 require('dotenv').config();
 
 const quizletRegex = /quizlet\.com\/(?<id>\d+)\/(?<name>[a-z0-9-]+flash-cards)/;

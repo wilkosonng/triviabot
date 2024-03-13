@@ -136,4 +136,7 @@ dist
 config.json
 
 # Generated Audio
-public/audio/questions
+
+cache/*
+public/audio/questions/*
+soundtest.js

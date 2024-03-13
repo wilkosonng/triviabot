@@ -189,6 +189,7 @@ function QuestionEmbed(questionSet, num, question) {
 
 	return msg;
 }
+
 /**
  * Generates an embed listing question set info to a query.
  *
@@ -329,7 +330,30 @@ function TeamLeaderboardEmbed(teamInfo) {
 	return msg.setDescription(description);
 }
 
+/**
+ * Generates an embed displaying the current question of the game.
+ *
+ * @param {string} questionSet The name of the current question set.
+ * @param {number} num The current question number.
+ * @param {Object} question The question being asked.
+ *
+ * @return {EmbedBuilder} The embed to be displayed.
+*/
+function VoiceQuestionEmbed(questionSet, num, question) {
+	const msg = new EmbedBuilder()
+		.setColor(embedColor)
+		.setTitle(`❔ ${questionSet} ※ Question ${num} ❔`)
+		.setDescription('Buzz in to answer the question!');
+
+	if (question.img) {
+		msg.setImage(question.img);
+	}
+
+	return msg;
+}
+
+
 module.exports = {
 	AddSummaryEmbed, BuzzEmbed, GeneralLeaderboardEmbed, InfoEmbed, ListEmbed, PlayerLeaderboardEmbed,
-	ResultEmbed, QuestionEmbed, QuestionInfoEmbed, StartEmbed, TeamLeaderboardEmbed
+	ResultEmbed, QuestionEmbed, QuestionInfoEmbed, StartEmbed, TeamLeaderboardEmbed, VoiceQuestionEmbed
 };

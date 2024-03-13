@@ -1,12 +1,17 @@
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType, SlashCommandBuilder, PermissionsBitField } = require('discord.js');
 const { NoSubscriberBehavior, VoiceConnectionStatus, AudioPlayerStatus, StreamType, createAudioPlayer, createAudioResource, entersState, joinVoiceChannel, getVoiceConnection } = require('@discordjs/voice');
 const { teams, teamEmojis } = require('../../config.json');
-const { playGame } = require('../game/playgame');
+const { playVoiceGame } = require('../game/playvoicegame');
+const { awaitAudioPlayerReady, randomize, updateLeaderboards } = require('../helpers/helpers');
+const { StartEmbed } = require('../helpers/embeds');
+const { existsSync, mkdirSync } = require('fs');
+const { join } = require('path');
 const { ref, get } = require('firebase/database');
 const { stringSimilarity } = require('string-similarity-js');
-const { StartEmbed } = require('../helpers/embeds.js');
 const { TextToSpeechClient } = require('@google-cloud/text-to-speech');
 require('dotenv').config();
+
+const cacheFolder = join(__dirname, '../..', 'cache');
 
 // Initializes TTS API access
 const ttsClient = new TextToSpeechClient({ credentials: JSON.parse(process.env.GOOGLE_CREDS) });
@@ -97,14 +102,14 @@ module.exports = {
 		const guildId = interaction.guildId;
 		const teamInfo = new Map();
 		const players = new Map();
-		let questions, description, joinCollector, audioPlayer;
+		let questions, description, joinCollector, connection, audioPlayer;
 
 		const user = await interaction.member.fetch();
 		const voiceChannel = user.voice?.channel;
 
 		// Ensures the user is in a proper voice channel.
 		if (!voiceChannel) {
-			return interaction.reply('You must be in a voice channel in order to use this command!');
+			return interaction.editReply('You must be in a voice channel in order to use this command!');
 		}
 
 		// Avoids duplicate games in the channel.
@@ -113,13 +118,22 @@ module.exports = {
 			return;
 		}
 
+		// Checks that the bot has permissions for the voice channel,
+		if (!voiceChannel.permissionsFor(interaction.client.user.id).has(PermissionsBitField.Flags.ViewChannel)) {
+			return await interaction.editReply('Error: No permissions to view voice channel!');
+		}
+
+		if (!voiceChannel.permissionsFor(interaction.client.user.id).has(PermissionsBitField.Flags.Speak)) {
+			return await interaction.editReply('No permissions to speak in voice channel!');
+		}
+
 		// Checks that the bot has permissions for the channel,
 		if (!channel.permissionsFor(interaction.client.user.id).has(PermissionsBitField.Flags.ViewChannel)) {
-			return await interaction.editReply('Error: No permissions to view channel!');
+			return await interaction.editReply('Error: No permissions to view text channel!');
 		}
 
 		if (!channel.permissionsFor(interaction.client.user.id).has(PermissionsBitField.Flags.SendMessages)) {
-			return await interaction.editReply('Error: No permissions to send messages in channel!');
+			return await interaction.editReply('Error: No permissions to send messages in text channel!');
 		}
 
 		// If the game is ranked, checks if the user has permission to start a ranked game.
@@ -166,7 +180,7 @@ module.exports = {
 			// Get set questions.
 			await get(ref(database, `questionLists/${set}/questions`)).then((snapshot) => {
 				if (snapshot.exists()) {
-					questions = snapshot.val();
+					questions = [...snapshot.val().entries()];
 					if (shuffle) {
 						randomize(questions);
 					}
@@ -199,7 +213,7 @@ module.exports = {
 				},
 			});
 
-			const connection = joinVoiceChannel({
+			connection = joinVoiceChannel({
 				channelId: voiceChannel.id,
 				guildId: guildId,
 				adapterCreator: voiceChannel.guild.voiceAdapterCreator,
@@ -207,9 +221,18 @@ module.exports = {
 
 			connection.subscribe(audioPlayer);
 
-			// const writeFile = util.promisify(fs.writeFile);
-			// await writeFile(path.join(audioFolder, 'questions', 'test.mp3'), response.audioContent, 'binary');
-			// console.log('Done!');
+			connection.on(VoiceConnectionStatus.Disconnected, async () => {
+				try {
+					await Promise.race([
+						entersState(connection, VoiceConnectionStatus.Signalling, 5_000),
+						entersState(connection, VoiceConnectionStatus.Connecting, 5_000),
+					]);
+					// Seems to be reconnecting to a new channel - ignore disconnect
+				} catch (error) {
+					// Seems to be a real disconnect which SHOULDN'T be recovered from
+					connection.destroy();
+				}
+			});
 
 			// Handles user interactions to join or leave the game.
 			joinCollector.on('collect', (buttonInteraction) => {
@@ -290,11 +313,18 @@ module.exports = {
 			switch (lowercaseMsg) {
 				case 'ready':
 					if (players.size) {
+						const setPath = join(cacheFolder, set);
 						startCollector.stop();
 						joinCollector.stop();
-						msg.reply('Game starting... Type `endtrivia` to end the game, `playerlb` to access player scores, `teamlb` to access team scores, and `buzz` to buzz in for a question!');
-						await playGame(channel, startChannel, teamInfo, players, losePoints, numSeconds, set, questions);
-						currGames.delete(channel.id);
+
+						// Check if the set exists in cache; if it doesn't, creates the directory.
+						if (!existsSync(setPath)) {
+							mkdirSync(setPath);
+						}
+
+						msg.reply('Game starting... Type `endtrivia` to end the game, `playerlb` to access player scores, and `teamlb` to access team scores!');
+						await playVoiceGame(channel, startChannel, teamInfo, players, losePoints, numSeconds, set, questions, description, connection, audioPlayer, ttsClient, setPath);
+						endGame();
 
 						// If the game was ranked, updates the leaderboards.
 						if (ranked) {
@@ -330,18 +360,15 @@ module.exports = {
 		function endGame() {
 			startCollector.stop();
 			joinCollector.stop();
-			audioPlayer.stop();
 			currGames.delete(channel.id);
 			currGuilds.delete(guildId);
-			getVoiceConnection(guildId).destroy();
-		}
 
-		// Defines a shuffle algorithm to randomize questions.
-		function randomize(arr) {
-			for (let i = arr.length - 1; i > 0; --i) {
-				const j = Math.random() * (i + 1) | 0;
-				[arr[i], arr[j]] = [arr[j], arr[i]];
-			}
+			awaitAudioPlayerReady(audioPlayer, () => {
+				audioPlayer.stop();
+				if (getVoiceConnection(guildId)) {
+					getVoiceConnection(guildId).destroy();
+				}
+			});
 		}
 
 		await interaction.editReply('Game successfully started! Type \`ready\` once all users have joined or \`endtrivia\` to end the game!');

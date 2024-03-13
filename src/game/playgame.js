@@ -1,5 +1,4 @@
-const { threshold } = require('../../config.json');
-const { stringSimilarity } = require('string-similarity-js');
+const { judgeAnswer } = require('../helpers/helpers');
 const { BuzzEmbed, PlayerLeaderboardEmbed, ResultEmbed, QuestionEmbed, TeamLeaderboardEmbed } = require('../helpers/embeds.js');
 
 // Starts the game passed through.
@@ -127,42 +126,6 @@ async function playGame(channel, startChannel, teamInfo, players, losePoints, nu
 		ended = true;
 		commandCollector.stop();
 	}
-}
-
-// Judges the answers for correctness using string similarity.
-function judgeAnswer(question, response) {
-	const answers = [...question.answer];
-
-	if (question.multi > 1) {
-		// If the question is a multi-part question, judges all parts.
-		let correct = 0;
-		for (const res of response.values()) {
-			if (answers.some((ans) => {
-				if (stringSimilarity(ans, res.content) > answerThreshold(ans)) {
-					answers.splice(answers.indexOf(ans), 1);
-					return true;
-				}
-				return false;
-			})) {
-				correct++;
-			}
-
-			if (correct === question.multi) {
-				return true;
-			}
-		}
-		return false;
-	} else {
-		// For single-part questions, simply returns if the response is close enough to one of the answers.
-		return answers.some((ans) => {
-			return stringSimilarity(ans, response.first().content) > answerThreshold(ans);
-		});
-	}
-}
-
-// Defines a tolerance for how similar a submission must be to an answer to be "correct"
-function answerThreshold(str) {
-	return 0.95 * Math.pow(Math.E, -(threshold / str.length));
 }
 
 module.exports = {

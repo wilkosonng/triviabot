@@ -1,5 +1,5 @@
 const { SlashCommandBuilder } = require('discord.js');
-const { InfoEmbed } = require('../helpers/embeds.js');
+const { InfoEmbed } = require('../helpers/embeds');
 const { stringSimilarity } = require('string-similarity-js');
 
 module.exports = {

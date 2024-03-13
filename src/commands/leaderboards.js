@@ -1,5 +1,5 @@
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType, SlashCommandBuilder } = require('discord.js');
-const { GeneralLeaderboardEmbed } = require('../helpers/embeds.js');
+const { GeneralLeaderboardEmbed } = require('../helpers/embeds');
 
 const navRow = new ActionRowBuilder()
 	.setComponents(
