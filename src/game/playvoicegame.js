@@ -2,7 +2,7 @@ const { buzzers, teams, teamEmojis } = require('../../config.json');
 const { open, readdirSync } = require('fs');
 const { writeFile } = require('fs/promises');
 const { join } = require('path');
-const { awaitAudioPlayerReady, judgeAnswer } = require('../helpers/helpers');
+const { awaitAudioPlayerReady, judgeAnswer, wait } = require('../helpers/helpers');
 const { BuzzEmbed, PlayerLeaderboardEmbed, ResultEmbed, VoiceQuestionEmbed, TeamLeaderboardEmbed } = require('../helpers/embeds');
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType } = require('discord.js');
 const { StreamType, createAudioResource } = require('@discordjs/voice');
@@ -30,14 +30,16 @@ const timeSound = join(audioFolder, 'time.ogg');
 const nobuzzSound = join(audioFolder, 'nobuzz.ogg');
 
 // Prepares duration measurements of constant files
-let correctDuration, incorrectDuration, timeDuration, nobuzzDuration;
+let correctDuration, incorrectDuration, timeDuration, nobuzzDuration, buzzerDurations, teamDurations;
 
 (async () => {
-	incorrectDuration = Math.round((await getAudioDurationInSeconds(incorrectSound)) * 1_000);
-	correctDuration = Math.round((await getAudioDurationInSeconds(correctSound)) * 1_000);
-	timeDuration = Math.round((await getAudioDurationInSeconds(timeSound)) * 1_000);
-	nobuzzDuration = Math.round((await getAudioDurationInSeconds(nobuzzSound)) * 1_000);
-});
+	incorrectDuration = Math.ceil((await getAudioDurationInSeconds(incorrectSound)) * 1_000);
+	correctDuration = Math.ceil((await getAudioDurationInSeconds(correctSound)) * 1_000);
+	timeDuration = Math.ceil((await getAudioDurationInSeconds(timeSound)) * 1_000);
+	nobuzzDuration = Math.ceil((await getAudioDurationInSeconds(nobuzzSound)) * 1_000);
+	buzzerDurations = await Promise.all(buzzersFiles.map(async (e) => Math.ceil((await getAudioDurationInSeconds(e)) * 1_000)));
+	teamDurations = await Promise.all(teamFiles.map(async (e) => Math.ceil((await getAudioDurationInSeconds(e)) * 1_000)));
+})();
 
 // Starts the game passed through.
 async function playVoiceGame(channel, startChannel, teamInfo, players, losePoints, numSeconds, set, questions, description, connection, audioPlayer, ttsClient, setPath) {
@@ -103,7 +105,7 @@ async function playVoiceGame(channel, startChannel, teamInfo, players, losePoint
 		await awaitAudioPlayerReady(audioPlayer);
 
 		// Wait to account for latency and distance between questions.
-		await new Promise(r => setTimeout(r, 4_000));
+		await wait(3_000);
 
 		// Asks a new question and sends it in the channel.
 		const [questionId, nextQuestion] = questions.shift();
@@ -138,7 +140,7 @@ async function playVoiceGame(channel, startChannel, teamInfo, players, losePoint
 				components: []
 			});
 
-			speakBuzz(audioPlayer, answerTeam);
+			const buzzDuration = await speakBuzz(audioPlayer, answerTeam);
 
 			await buzz.reply({
 				embeds: [BuzzEmbed(answerer.username, answerTeam, msg.client, numAnswers, numSeconds)]
@@ -146,12 +148,15 @@ async function playVoiceGame(channel, startChannel, teamInfo, players, losePoint
 
 			try {
 				// If a player buzzes in, awaits an answer from that player.
-				const ans = await channel.awaitMessages({
+				const answerPromise = channel.awaitMessages({
 					filter: (m) => m.author.id === answerer.id && !['endtrivia', 'playerlb', 'teamlb'].includes(m.content),
 					max: numAnswers,
 					time: 1_000 * numSeconds * numAnswers,
 					errors: ['time']
 				});
+
+				await Promise.all([wait(buzzDuration), answerPromise]);
+				const ans = await answerPromise;
 
 				// Judges the player's answer and updates the new score.
 				if (judgeAnswer(nextQuestion, ans)) {
@@ -287,27 +292,30 @@ async function speakQuestion(ttsClient, audioPlayer, questionId, questionNumber,
 	audioPlayer.play(createAudioResource(questionNumberPath, { inputType: StreamType.OggOpus }));
 
 	awaitAudioPlayerReady(audioPlayer, async () => {
-		await new Promise(r => setTimeout(r, 500));
+		await wait(500);
 		audioPlayer.play(createAudioResource(questionPath, { inputType: StreamType.OggOpus }));
 		questionStarted[0] = true;
 	});
 
-	return Math.round((await getAudioDurationInSeconds(questionPath)) * 1_000);
+	return Math.ceil((await getAudioDurationInSeconds(questionPath)) * 1_000);
 }
 
-function speakBuzz(audioPlayer, team) {
+async function speakBuzz(audioPlayer, team) {
+	const teamIndex = emojiMap.get(team);
 	audioPlayer.pause();
-	audioPlayer.play(createAudioResource(buzzersFiles[emojiMap.get(team)], { inputType: StreamType.OggOpus }));
+	audioPlayer.play(createAudioResource(buzzersFiles[teamIndex], { inputType: StreamType.OggOpus }));
 
 	awaitAudioPlayerReady(audioPlayer, async () => {
-		await new Promise(r => setTimeout(r, 200));
-		audioPlayer.play(createAudioResource(teamFiles[emojiMap.get(team)], { inputType: StreamType.OggOpus }));
+		await wait(200);
+		audioPlayer.play(createAudioResource(teamFiles[teamIndex], { inputType: StreamType.OggOpus }));
 	});
+
+	return buzzerDurations[teamIndex] + teamDurations[teamIndex];
 }
 
 async function speakResult(audioPlayer, result, questionId, path) {
 	const answerPath = join(path, `answer${questionId}.ogg`);
-	const answerDuration = Math.round((await getAudioDurationInSeconds(answerPath)) * 1_000);
+	const answerDuration = Math.ceil((await getAudioDurationInSeconds(answerPath)) * 1_000);
 	let totalDuration = 0;
 	switch (result) {
 		case 'correct':
@@ -317,7 +325,7 @@ async function speakResult(audioPlayer, result, questionId, path) {
 		case 'incorrect':
 			audioPlayer.play(createAudioResource(incorrectSound, { inputType: StreamType.OggOpus }));
 			awaitAudioPlayerReady(audioPlayer, async () => {
-				await new Promise(r => setTimeout(r, 200));
+				await wait(200);
 				audioPlayer.play(createAudioResource(answerPath, { inputType: StreamType.OggOpus }));
 			});
 			totalDuration += answerDuration + incorrectDuration + 200;
@@ -325,7 +333,7 @@ async function speakResult(audioPlayer, result, questionId, path) {
 		case 'time':
 			audioPlayer.play(createAudioResource(timeSound, { inputType: StreamType.OggOpus }));
 			awaitAudioPlayerReady(audioPlayer, async () => {
-				await new Promise(r => setTimeout(r, 200));
+				await wait(200);
 				audioPlayer.play(createAudioResource(answerPath, { inputType: StreamType.OggOpus }));
 			});
 			totalDuration += answerDuration + timeDuration + 200;
@@ -333,7 +341,7 @@ async function speakResult(audioPlayer, result, questionId, path) {
 		case 'nobuzz':
 			audioPlayer.play(createAudioResource(nobuzzSound, { inputType: StreamType.OggOpus }));
 			awaitAudioPlayerReady(audioPlayer, async () => {
-				await new Promise(r => setTimeout(r, 200));
+				await wait(200);
 				audioPlayer.play(createAudioResource(answerPath, { inputType: StreamType.OggOpus }));
 			});
 			totalDuration += answerDuration + nobuzzDuration + 200;

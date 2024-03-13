@@ -1,4 +1,4 @@
-const { judgeAnswer } = require('../helpers/helpers');
+const { judgeAnswer, wait } = require('../helpers/helpers');
 const { BuzzEmbed, PlayerLeaderboardEmbed, ResultEmbed, QuestionEmbed, TeamLeaderboardEmbed } = require('../helpers/embeds.js');
 
 // Starts the game passed through.
@@ -109,7 +109,7 @@ async function playGame(channel, startChannel, teamInfo, players, losePoints, nu
 			});
 		}
 
-		await new Promise(r => setTimeout(r, 5_000));
+		await wait(5_000);
 		questionNumber++;
 	}
 

@@ -20,7 +20,7 @@ function answerThreshold(str) {
  *
  * @returns {Promise<null>} A promise once the audio player becomes idle.
  */
-async function awaitAudioPlayerReady(audioPlayer, callback = () => ({ })) {
+async function awaitAudioPlayerReady(audioPlayer, callback = () => ({})) {
 	return new Promise(async (resolve) => {
 		if (audioPlayer?.state?.status === AudioPlayerStatus.Idle) {
 			callback();
@@ -229,6 +229,16 @@ function uploadSet(database, questionSet, title, description, owner) {
 	return true;
 }
 
+/**
+ * Waits for a certain number of milliseconds
+ * @param {number} time The amount of time, in milliseconds, to wait for
+ *
+ * @returns {Promise} A promise that resolves to null
+ */
+async function wait(time) {
+	return new Promise(r => setTimeout(r, time));
+}
+
 module.exports = {
-	awaitAudioPlayerReady, deleteSet, judgeAnswer, randomize, removeWhiteSpace, replaceLineBreaks, resetLeaderboard, updateLeaderboards, uploadSet
+	awaitAudioPlayerReady, deleteSet, judgeAnswer, randomize, removeWhiteSpace, replaceLineBreaks, resetLeaderboard, updateLeaderboards, uploadSet, wait
 };
