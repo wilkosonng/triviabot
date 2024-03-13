@@ -23,6 +23,8 @@ Additional information can be obtained using the `/info` command.
 
 - `/startgame` - Starts a text channel-based game.
   - Once a game has started, use `ready`, `buzz`, and `endtrivia` commands to control the game flow. Use `playerlb` and `teamlb` to view the current scores.
+- `/startvoicegame` - Starts a voice channel-based game.
+  - Same commands as text-based games, but use the buzzer button to buzz in instead.
 
 
 ## Self-Hosting
