@@ -323,7 +323,7 @@ module.exports = {
 						}
 
 						msg.reply('Game starting... Type `endtrivia` to end the game, `playerlb` to access player scores, and `teamlb` to access team scores!');
-						await playVoiceGame(channel, startChannel, teamInfo, players, losePoints, numSeconds, set, questions, description, connection, audioPlayer, ttsClient, setPath);
+						await playVoiceGame(channel, startChannel, teamInfo, players, losePoints, numSeconds, set, questions, description, audioPlayer, ttsClient, setPath);
 						endGame();
 
 						// If the game was ranked, updates the leaderboards.

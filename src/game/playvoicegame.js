@@ -42,7 +42,7 @@ let correctDuration, incorrectDuration, timeDuration, nobuzzDuration, buzzerDura
 })();
 
 // Starts the game passed through.
-async function playVoiceGame(channel, startChannel, teamInfo, players, losePoints, numSeconds, set, questions, description, connection, audioPlayer, ttsClient, setPath) {
+async function playVoiceGame(channel, startChannel, teamInfo, players, losePoints, numSeconds, set, questions, description, audioPlayer, ttsClient, setPath) {
 	const questionStarted = [false];
 	let questionNumber = 1;
 	let ended = false;
@@ -122,7 +122,16 @@ async function playVoiceGame(channel, startChannel, teamInfo, players, losePoint
 		try {
 			// After the question is sent, look for a player buzz.
 			const buzz = await msg.awaitMessageComponent({
-				filter: (i) => players.has(i.user.id) && questionStarted[0],
+				filter: (i) => {
+					if (!questionStarted[0]) {
+						i.reply({
+							content: 'Woah there! Slow your horses, buckaroo. The question hasn\'t even started yet!',
+							ephemeral: true
+						});
+						return false;
+					}
+					return players.has(i.user.id);
+				},
 				time: 15_000 + questionDuration,
 				componenentType: ComponentType.Button
 			});
