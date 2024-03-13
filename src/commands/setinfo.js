@@ -1,12 +1,8 @@
 const { SlashCommandBuilder } = require('discord.js');
-const { initializeApp } = require('firebase/app');
-const { getDatabase, ref, get } = require('firebase/database');
+const { ref, get } = require('firebase/database');
 const { stringSimilarity } = require('string-similarity-js');
 const { QuestionInfoEmbed } = require('../helpers/embeds');
 require('dotenv').config();
-
-const firebaseApp = initializeApp(JSON.parse(process.env.FIREBASE_CREDS));
-const database = getDatabase(firebaseApp);
 
 module.exports = {
 	data: new SlashCommandBuilder()
@@ -25,7 +21,7 @@ module.exports = {
 		await interaction.respond(choices.map((set) => ({ name: set, value: set })));
 	},
 
-	async execute(interaction, currSets) {
+	async execute(interaction, database, currSets) {
 		await interaction.deferReply();
 
 		const title = interaction.options.getString('title');
