@@ -131,12 +131,12 @@ async function scrapeSet(url, flip) {
 	const page = await browser.newPage();
 	await page.goto(url);
 
-	await page.waitForSelector('.SetPage-terms', {
+	await page.waitForSelector('.SetPageTerms-termsList', {
 		visible: true
 	});
 
 	// Makes sure we get every term.
-	if (await page.$('button[aria-label="See more"]') != null) {
+	while (await page.$('button[aria-label="See more"]') != null) {
 		await page.click('button[aria-label="See more"]');
 	}
 
@@ -144,8 +144,8 @@ async function scrapeSet(url, flip) {
 
 	// eslint-disable-next-line no-shadow
 	const data = await page.evaluate((flipped) => {
-		const questions = Array.from(document.querySelectorAll('.SetPageTerm-wordText > .TermText'));
-		const answers = Array.from(document.querySelectorAll('.SetPageTerm-definitionText > .TermText'));
+		const questions = Array.from(document.querySelectorAll('.s1q0b356 > .TermText'));
+		const answers = Array.from(document.querySelectorAll('.hcszxtp > .TermText'));
 
 		if (questions.length > 1000 || answers.length !== questions.length) {
 			return null;
