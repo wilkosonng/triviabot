@@ -293,6 +293,7 @@ async function synthesizeAsync(ttsClient, text, path) {
 	});
 }
 
+// Speaks the quesiton number followed by the question. Returns a promise of the duration of both in milliseconds.
 async function speakQuestion(ttsClient, audioPlayer, questionId, questionNumber, questionStarted, path) {
 	const questionNumberPath = join(audioFolder, 'questions', `question${questionNumber}.ogg`);
 	const questionPath = join(path, `question${questionId}.ogg`);
@@ -309,6 +310,7 @@ async function speakQuestion(ttsClient, audioPlayer, questionId, questionNumber,
 	return Math.ceil((await getAudioDurationInSeconds(questionPath)) * 1_000);
 }
 
+// Speaks the buzzer sound followed by the team acknowledgement. Returns a promise of the duration of both in milliseconds.
 async function speakBuzz(audioPlayer, team) {
 	const teamIndex = emojiMap.get(team);
 	audioPlayer.pause();
@@ -322,10 +324,12 @@ async function speakBuzz(audioPlayer, team) {
 	return buzzerDurations[teamIndex] + teamDurations[teamIndex];
 }
 
+// Speaks the result as well as the answer when necessary. Returns a promise of the duration of both in milliseconds.
 async function speakResult(audioPlayer, result, questionId, path) {
 	const answerPath = join(path, `answer${questionId}.ogg`);
 	const answerDuration = Math.ceil((await getAudioDurationInSeconds(answerPath)) * 1_000);
 	let totalDuration = 0;
+
 	switch (result) {
 		case 'correct':
 			audioPlayer.play(createAudioResource(correctSound, { inputType: StreamType.OggOpus }));
