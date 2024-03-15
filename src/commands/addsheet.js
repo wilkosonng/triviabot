@@ -6,7 +6,7 @@ const { removeWhiteSpace, uploadSet, deleteSet } = require('../helpers/helpers')
 require('dotenv').config();
 
 const sheetsRegex = /docs\.google\.com\/spreadsheets(\/u\/\d)?\/d\/(?<id>[\w-]+)\//;
-const questionRegex = /^(!!img\[(?<img>https?:\/\/(?:www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\+.~#?&\/=]*)\.(png|jpg|jpeg|gif|webp))\])?(?<question>(This is an? (?<ansnum>[2-9]) part question\. )?.{1, 1000})$/i;
+const questionRegex = /^(!!img\[(?<img>https?:\/\/(?:www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\+.~#?&\/=]*)\.(png|jpg|jpeg|gif|webp))\])?(?<question>(This is an? (?<ansnum>[2-9]) part question\. )?.{1,1000})$/i;
 
 module.exports = {
 	data: new SlashCommandBuilder()
