@@ -9,6 +9,7 @@ const { StreamType, createAudioResource } = require('@discordjs/voice');
 const { getAudioDurationInSeconds } = require('get-audio-duration');
 
 const audioFolder = join(__dirname, '../..', 'public', 'audio');
+const commands = ['endtrivia', 'teamlb', 'tlb', 'playerlb', 'plb'];
 
 // Sets up action row for buzzing in.
 const buzzActionRow = new ActionRowBuilder()
@@ -53,7 +54,7 @@ async function playVoiceGame(channel, startChannel, teamInfo, players, losePoint
 	const commandCollector = startChannel.createMessageCollector({
 		filter: (msg) => {
 			const content = msg.content.toLowerCase();
-			return ['endtrivia', 'teamlb', 'tlb', 'playerlb', 'plb'].includes(content);
+			return commands.includes(content);
 		}
 	});
 
@@ -160,7 +161,7 @@ async function playVoiceGame(channel, startChannel, teamInfo, players, losePoint
 			try {
 				// If a player buzzes in, awaits an answer from that player.
 				const answerPromise = channel.awaitMessages({
-					filter: (m) => m.author.id === answerer.id && !['endtrivia', 'playerlb', 'teamlb'].includes(m.content),
+					filter: (m) => m.author.id === answerer.id && !commands.includes(m.content),
 					max: numAnswers,
 					time: 1_000 * numSeconds * numAnswers,
 					errors: ['time']

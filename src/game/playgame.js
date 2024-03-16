@@ -1,6 +1,8 @@
 const { judgeAnswer, wait } = require('../helpers/helpers');
 const { BuzzEmbed, PlayerLeaderboardEmbed, ResultEmbed, QuestionEmbed, TeamLeaderboardEmbed } = require('../helpers/embeds.js');
 
+const commands = ['endtrivia', 'teamlb', 'tlb', 'playerlb', 'plb'];
+
 // Starts the game passed through.
 async function playGame(channel, startChannel, teamInfo, players, losePoints, numSeconds, set, questions) {
 	let questionNumber = 1;
@@ -10,7 +12,7 @@ async function playGame(channel, startChannel, teamInfo, players, losePoints, nu
 	const commandCollector = startChannel.createMessageCollector({
 		filter: (msg) => {
 			const content = msg.content.toLowerCase();
-			return ['endtrivia', 'teamlb', 'tlb', 'playerlb', 'plb'].includes(content);
+			return commands.includes(content);
 		}
 	});
 
@@ -72,7 +74,7 @@ async function playGame(channel, startChannel, teamInfo, players, losePoints, nu
 			try {
 				// If a player buzzes in, awaits an answer from that player.
 				const ans = await channel.awaitMessages({
-					filter: (m) => m.author.id === answerer.id && !['endtrivia', 'playerlb', 'teamlb'].includes(m.content),
+					filter: (m) => m.author.id === answerer.id && !commands.includes(m.content),
 					max: numAnswers,
 					time: 1_000 * numSeconds * numAnswers,
 					errors: ['time']
