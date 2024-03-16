@@ -53,7 +53,7 @@ async function playVoiceGame(channel, startChannel, teamInfo, players, losePoint
 	const commandCollector = startChannel.createMessageCollector({
 		filter: (msg) => {
 			const content = msg.content.toLowerCase();
-			return content === 'endtrivia' || content === 'teamlb' || content === 'playerlb';
+			return ['endtrivia', 'teamlb', 'tlb', 'playerlb', 'plb'].includes(content);
 		}
 	});
 
@@ -65,11 +65,13 @@ async function playVoiceGame(channel, startChannel, teamInfo, players, losePoint
 				endGame();
 				break;
 			case 'teamlb':
+			case 'tlb':
 				channel.send({
 					embeds: [TeamLeaderboardEmbed(teamInfo)]
 				});
 				break;
 			case 'playerlb':
+			case 'plb':
 				channel.send({
 					embeds: [PlayerLeaderboardEmbed(players)]
 				});
