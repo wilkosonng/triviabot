@@ -4,7 +4,7 @@ const { initializeApp } = require('firebase/app');
 const { getAuth, signInWithEmailAndPassword, signOut } = require('firebase/auth');
 const { getDatabase, onValue, ref } = require('firebase/database');
 const { scheduleJob } = require('node-schedule');
-const { resetLeaderboard } = require('./src/helpers/helpers.js');
+const { clearCache, resetLeaderboard } = require('./src/helpers/helpers');
 const fs = require('fs');
 const path = require('path');
 
@@ -17,13 +17,16 @@ const auth = getAuth(firebaseApp);
 
 // Cached copies of question sets and leaderboards.
 let sets = {};
-let leaderboards = {};
+let stats = {};
 
 // Channels with a current ongoing game (voice/text)
 const channels = new Set();
 
 // Guilds with a current ongoing voice game
 const guilds = new Set();
+
+// Current voice sets being played to put locks on removing them.
+const voiceSets = new Map();
 
 // Bot client
 const client = new Client({
@@ -67,19 +70,17 @@ client.once(Events.ClientReady, async clientObject => {
 		console.log(Object.keys(sets));
 	});
 
-	// Keeps local cache of the ranked leaderboards
-	onValue(ref(database, 'leaderboards'), (snapshot) => {
-		leaderboards = snapshot.val() ?? {};
-		console.log('Leaderboards Updated!');
-		console.log(leaderboards);
+	// Keeps local cache of stats
+	onValue(ref(database, 'stats'), (snapshot) => {
+		stats = snapshot.val() ?? {};
+	});
+
+	// Sets up scheduled daily clearing of audio cache
+	scheduleJob('0 0 * * *', () => {
+		clearCache();
 	});
 
 	// Sets up scheduled leaderboard updates
-	scheduleJob('0 0 * * *', () => {
-		// Resets daily leaderboard
-		resetLeaderboard(database, 'daily');
-	});
-
 	scheduleJob('0 0 * * 0', () => {
 		// Resets weekly leaderboard
 		resetLeaderboard(database, 'weekly');
@@ -114,25 +115,28 @@ client.on(Events.InteractionCreate, async interaction => {
 				case 'adddoc':
 				case 'addquizlet':
 				case 'addsheet':
-				case 'removeset':
 				case 'setinfo':
 					// Passes array of set name cache
 					await command.execute(interaction, database, Object.keys(sets));
 					break;
+				case 'removeset':
+					// Passes array of set name cache as well as current voice sets
+					await command.execute(interaction, database, Object.keys(sets), voiceSets);
+					break;
 				case 'startgame':
-					// Passes array of set name cache and active channels.
+					// Passes array of set name cache and active channels
 					await command.execute(interaction, database, Object.keys(sets), channels);
 					break;
 				case 'startvoicegame':
-					// Passes array of set name cache and active channels and guilds.
-					await command.execute(interaction, database, Object.keys(sets), channels, guilds);
+					// Passes array of set name cache and active channels and guilds and mutable voice set map
+					await command.execute(interaction, database, Object.keys(sets), channels, guilds, voiceSets);
 					break;
 				case 'listsets':
 					// Passes array of set metadata cache
 					await command.execute(interaction, Object.entries(sets));
 					break;
 				case 'leaderboards':
-					await command.execute(interaction, leaderboards);
+					await command.execute(interaction, stats);
 					break;
 				case 'info':
 					// Passes in command list

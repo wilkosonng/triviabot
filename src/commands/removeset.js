@@ -2,7 +2,11 @@ const { SlashCommandBuilder, PermissionsBitField } = require('discord.js');
 const { ref, get } = require('firebase/database');
 const { stringSimilarity } = require('string-similarity-js');
 const { deleteSet } = require('../helpers/helpers');
+const { join } = require('path');
+const { rmSync } = require('fs');
 require('dotenv').config;
+
+const cacheFolder = join(__dirname, '../..', 'cache');
 
 module.exports = {
 	data: new SlashCommandBuilder()
@@ -21,7 +25,7 @@ module.exports = {
 		await interaction.respond(choices.map((set) => ({ name: set, value: set })));
 	},
 
-	async execute(interaction, database, currSets) {
+	async execute(interaction, database, currSets, voiceSets) {
 		await interaction.deferReply();
 
 		const title = interaction.options.getString('title');
@@ -33,6 +37,13 @@ module.exports = {
 		if (!currSets.includes(title)) {
 			return interaction.editReply({
 				content: `No question set of name ${title}.`
+			});
+		}
+
+		// Checks if there is an active voice game for the set.
+		if (voiceSets.has(title)) {
+			return interaction.editReply({
+				content: 'Cannot remove a set with an ongoing voice game!'
 			});
 		}
 
@@ -51,8 +62,17 @@ module.exports = {
 
 		// Checks if the user has sufficient permissions.
 		if (owner === user.id || user.permissions.has(PermissionsBitField.Flags.Administrator)) {
-			// Returns with the status of if the deletion was auccess
 			if (deleteSet(database, title)) {
+				// If operation is successful, check if it has cached audio files and delete them.
+				try {
+					rmSync(join(cacheFolder, title), { recursive: true, force: true });
+				} catch (err) {
+					if (err.code !== 'ENOENT') {
+						console.log(`Could not delete cache of ${title}`);
+						console.error(err);
+					}
+				}
+
 				return interaction.editReply({
 					content: `Successfully removed question set ${title}!`,
 				});

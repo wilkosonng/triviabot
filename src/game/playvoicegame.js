@@ -1,9 +1,9 @@
 const { buzzers, teams, teamEmojis } = require('../../config.json');
 const { open, readdirSync } = require('fs');
-const { writeFile } = require('fs/promises');
+const { utimes, writeFile } = require('fs/promises');
 const { join } = require('path');
-const { awaitAudioPlayerReady, judgeAnswer, wait } = require('../helpers/helpers');
-const { BuzzEmbed, PlayerLeaderboardEmbed, ResultEmbed, VoiceQuestionEmbed, TeamLeaderboardEmbed } = require('../helpers/embeds');
+const { awaitAudioPlayerReady, judgeAnswer, processResult, wait } = require('../helpers/helpers');
+const { BuzzEmbed, PlayerLeaderboardEmbed, VoiceQuestionEmbed, TeamLeaderboardEmbed } = require('../helpers/embeds');
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType } = require('discord.js');
 const { StreamType, createAudioResource } = require('@discordjs/voice');
 const { getAudioDurationInSeconds } = require('get-audio-duration');
@@ -68,13 +68,13 @@ async function playVoiceGame(channel, startChannel, teamInfo, players, losePoint
 			case 'teamlb':
 			case 'tlb':
 				channel.send({
-					embeds: [TeamLeaderboardEmbed(teamInfo)]
+					embeds: [TeamLeaderboardEmbed(teamInfo, losePoints)]
 				});
 				break;
 			case 'playerlb':
 			case 'plb':
 				channel.send({
-					embeds: [PlayerLeaderboardEmbed(players)]
+					embeds: [PlayerLeaderboardEmbed(players, losePoints)]
 				});
 				break;
 		}
@@ -89,6 +89,10 @@ async function playVoiceGame(channel, startChannel, teamInfo, players, losePoint
 		await synthesizeAsync(ttsClient, description, join(setPath, 'description.ogg'));
 		await prepareNextQuestions(ttsClient, questions, questionNumber, setPath);
 	}
+
+	// Sets last modified of audio directory for cache deletion purposes.
+	const gameTime = new Date();
+	utimes(setPath, gameTime, gameTime);
 
 	// Reads the description.
 	audioPlayer.play(createAudioResource(join(setPath, 'description.ogg'), { inputType: StreamType.OggOpus }));
@@ -119,7 +123,7 @@ async function playVoiceGame(channel, startChannel, teamInfo, players, losePoint
 			components: [buzzActionRow]
 		});
 
-		let resultDuration = 0;
+		let result = null, response = null, answerer = null, answerTeam = null;
 		const questionDuration = await speakQuestion(ttsClient, audioPlayer, questionId, questionNumber, questionStarted, setPath);
 
 		try {
@@ -139,8 +143,8 @@ async function playVoiceGame(channel, startChannel, teamInfo, players, losePoint
 				componenentType: ComponentType.Button
 			});
 
-			const answerer = buzz.user;
-			const answerTeam = players.get(answerer.id).team;
+			answerer = buzz.user;
+			answerTeam = players.get(answerer.id).team;
 			const numAnswers = nextQuestion.multi;
 
 			questionEmbed
@@ -168,42 +172,13 @@ async function playVoiceGame(channel, startChannel, teamInfo, players, losePoint
 				});
 
 				await Promise.all([wait(buzzDuration), answerPromise]);
-				const ans = await answerPromise;
+				response = await answerPromise;
 
-				// Judges the player's answer and updates the new score.
-				if (judgeAnswer(nextQuestion, ans)) {
-					players.get(answerer.id).score++;
-					teamInfo.get(answerTeam).score++;
-
-					resultDuration = await speakResult(audioPlayer, 'correct', questionId, setPath);
-
-					await channel.send({
-						embeds: [ResultEmbed('correct', nextQuestion, losePoints, answerer.username, ans)]
-					});
-				} else {
-					if (losePoints) {
-						players.get(answerer.id).score--;
-						teamInfo.get(answerTeam).score--;
-					}
-
-					resultDuration = await speakResult(audioPlayer, 'incorrect', questionId, setPath);
-
-					await channel.send({
-						embeds: [ResultEmbed('incorrect', nextQuestion, losePoints, answerer.username, ans)]
-					});
-				}
+				// Judges the player's answer
+				result = judgeAnswer(nextQuestion, response) ? 'correct' : 'incorrect';
 			} catch (time) {
 				// If a player who buzzes in, runs out of time, calculates new score depending on settings.
-				if (losePoints) {
-					players.get(answerer.id).score--;
-					teamInfo.get(answerTeam).score--;
-				}
-
-				resultDuration = await speakResult(audioPlayer, 'time', questionId, setPath);
-
-				await channel.send({
-					embeds: [ResultEmbed('time', nextQuestion, losePoints, answerer.username)]
-				});
+				result = 'timeout';
 			}
 		} catch (nobuzz) {
 			// If no player buzzes in, sends an acknowledgement and move on to the next question.
@@ -211,15 +186,14 @@ async function playVoiceGame(channel, startChannel, teamInfo, players, losePoint
 				components: []
 			});
 
-			resultDuration = await speakResult(audioPlayer, 'nobuzz', questionId, setPath);
-
-			await channel.send({
-				embeds: [ResultEmbed('nobuzz', nextQuestion, losePoints, null, null)]
-			});
+			result = 'nobuzz';
 		}
 
+		const resultDuration = await speakResult(audioPlayer, result, questionId, setPath);
+		await processResult(result, nextQuestion, response, answerTeam, answerer, teamInfo, players, channel, losePoints);
+
 		// Wait for result to finish
-		await new Promise(r => setTimeout(r, resultDuration));
+		await wait(resultDuration);
 
 		questionNumber++;
 		questionStarted[0] = false;
@@ -231,10 +205,10 @@ async function playVoiceGame(channel, startChannel, teamInfo, players, losePoint
 
 	channel.send({
 		content: '## Game Ended! Final Standings:',
-		embeds: [TeamLeaderboardEmbed(teamInfo), PlayerLeaderboardEmbed(players)]
+		embeds: [TeamLeaderboardEmbed(teamInfo, losePoints), PlayerLeaderboardEmbed(players, losePoints)]
 	});
 
-	await new Promise(r => setTimeout(r, 10_000));
+	await wait(5_000);
 
 	function endGame() {
 		ended = true;

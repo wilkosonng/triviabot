@@ -3,7 +3,7 @@ const { teams, teamEmojis } = require('../../config.json');
 const { ref, get } = require('firebase/database');
 const { playGame } = require('../game/playgame');
 const { stringSimilarity } = require('string-similarity-js');
-const { updateLeaderboards, randomize } = require('../helpers/helpers');
+const { updateStats, randomize } = require('../helpers/helpers');
 const { StartEmbed } = require('../helpers/embeds');
 
 require('dotenv').config();
@@ -115,16 +115,6 @@ module.exports = {
 			return await interaction.editReply('Error: User does not have permissions to start a ranked game!');
 		}
 
-		currGames.add(channel.id);
-
-		for (let i = 0; i < numTeams; i++) {
-			teamInfo.set(teamEmojis[i], {
-				name: teams[i],
-				players: new Set(),
-				score: 0
-			});
-		}
-
 		try {
 			// If the set is undefined, chooses a random set.
 			if (set == null) {
@@ -156,6 +146,18 @@ module.exports = {
 			console.error(error);
 			return interaction.editReply({
 				content: 'Database reference error.',
+			});
+		}
+
+		currGames.add(channel.id);
+
+		for (let i = 0; i < numTeams; i++) {
+			teamInfo.set(teamEmojis[i], {
+				name: teams[i],
+				players: new Set(),
+				correct: 0,
+				incorrect: 0,
+				timeout: 0
 			});
 		}
 
@@ -215,7 +217,9 @@ module.exports = {
 				players.set(player, {
 					name: username,
 					team: newTeam,
-					score: 0
+					correct: 0,
+					incorrect: 0,
+					timeout: 0
 				});
 
 				return buttonInteraction.update(
@@ -250,15 +254,16 @@ module.exports = {
 			switch (lowercaseMsg) {
 				case 'ready':
 					if (players.size) {
+						const numQuestions = questions.length;
 						startCollector.stop();
 						joinCollector.stop();
 						msg.reply('Game starting... Type `endtrivia` to end the game, `playerlb` to access player scores, `teamlb` to access team scores, and `buzz` to buzz in for a question!');
 						await playGame(channel, startChannel, teamInfo, players, losePoints, numSeconds, set, questions);
 						currGames.delete(channel.id);
 
-						// If the game was ranked, updates the leaderboards.
-						if (ranked) {
-							updateLeaderboards(database, players);
+						// Updates leaderboards if game was ranked, all questions were asked, or if at least 10 questions were played.
+						if (ranked || !questions.length || numQuestions - questions.length >= 10) {
+							updateStats(database, players, ranked, losePoints);
 						}
 					} else {
 						channel.send('Need at least one player to start!');

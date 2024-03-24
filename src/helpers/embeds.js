@@ -58,21 +58,20 @@ function BuzzEmbed(playerName, team, client, numAnswers, numSeconds) {
  *
  * @return {EmbedBuilder} The embed to be displayed.
 */
-function GeneralLeaderboardEmbed(page, maxPage, leaderboards, type) {
+function GeneralLeaderboardEmbed(page, maxPage, leaderboards, type, stat) {
 	const typeMap = new Map([
 		['alltime', 'All Time'],
-		['daily', 'Daily'],
 		['weekly', 'Weekly'],
 		['monthly', 'Monthly']
 	]);
 
-	const leftIndex = 10 * (page - 1);
+	const leftIndex = Math.max(10 * (page - 1), -1);
 	const rightIndex = Math.min(10 * page, leaderboards.length);
 	const slice = leaderboards.slice(leftIndex, rightIndex);
 
 	const msg = new EmbedBuilder()
 		.setColor(embedColor)
-		.setTitle(`🏆 ${typeMap.get(type)} Leaderboards 🏆`)
+		.setTitle(`🏆 ${typeMap.get(type)} ${getStatString(stat)} 🏆`)
 		.setFooter({ text: `Page ${page} of ${maxPage} ※ Players ${leftIndex + 1} to ${rightIndex}` });
 
 	// If there are no matches played, returns an empty leaderboard.
@@ -83,11 +82,16 @@ function GeneralLeaderboardEmbed(page, maxPage, leaderboards, type) {
 	// Otherwise, fills the embed with the page results.
 	let description = '';
 
-	for (const [player, score] of slice) {
-		description += `${score} points - ${userMention(player)}\n`;
+	for (const [player, stats] of slice) {
+		description += `${stats}${stat === 'rankedAccuracy' || stat === 'unrankedAccuracy' ? '%' : ''} - ${userMention(player)}\n`;
 	}
 
 	return msg.setDescription(description);
+}
+
+// Helper function that turns camel casing into title casing.
+function getStatString(stat) {
+	return stat[0].toUpperCase() + stat.replace(/([A-Z])/g, ' $1').slice(1);
 }
 
 /**
@@ -155,7 +159,7 @@ function ListEmbed(page, maxPage, keyword, questionSets) {
  *
  * @return {EmbedBuilder} The embed to be displayed.
 */
-function PlayerLeaderboardEmbed(players) {
+function PlayerLeaderboardEmbed(players, losePoints) {
 	const msg = new EmbedBuilder()
 		.setColor(embedColor)
 		.setTitle('🏆 Player Standings 🏆');
@@ -163,7 +167,7 @@ function PlayerLeaderboardEmbed(players) {
 	let description = '';
 	const sorted = new Map([...(players.entries())].sort((a, b) => b[1].score - a[1].score));
 	sorted.forEach((player) => {
-		description += `${inlineCode(`${player.score} points`)} - ${player.name}\n`;
+		description += `${inlineCode(`${losePoints ? player.correct - player.incorrect - player.timeout : player.correct} points (${player.correct}/${player.incorrect}/${player.timeout})`)} - ${player.name}\n`;
 	});
 	return msg.setDescription(description);
 }
@@ -238,7 +242,7 @@ function ResultEmbed(correct, question, losePoints, answerer, response) {
 			description = losePoints ? `${answerer} has just lost their team 1 point!` : `Unfortunately, ${answerer} did not answer correctly!`;
 			break;
 		}
-		case 'time': {
+		case 'timeout': {
 			emoji = '⏱️';
 			message = 'Time\'s Up!';
 			description = losePoints ? `${answerer} has just lost their team 1 point!` : `Unfortunately, ${answerer} did not answer correctly!`;
@@ -316,15 +320,15 @@ function StartEmbed(questionSet, description, numTeams, teamInfo) {
  *
  * @return {EmbedBuilder} The embed to be displayed.
 */
-function TeamLeaderboardEmbed(teamInfo) {
+function TeamLeaderboardEmbed(teamInfo, losePoints) {
 	const msg = new EmbedBuilder()
 		.setColor(embedColor)
 		.setTitle('🏆 Team Standings 🏆');
 
 	let description = '';
-	const sorted = new Map([...(teamInfo.entries())].sort((a, b) => b[1].score - a[1].score));
+	const sorted = [...(teamInfo.values())].sort((a, b) => losePoints ? b.correct - b.incorrect - b.timeout - a.correct + a.incorrect + a.timeout : b.correct - a.correct);
 	sorted.forEach((team) => {
-		description += `${inlineCode(`${team.score} points`)} - ${team.name}\n`;
+		description += `${inlineCode(`${losePoints ? team.correct - team.incorrect - team.timeout : team.correct} points (${team.correct}/${team.incorrect}/${team.timeout})`)} - ${team.name}\n`;
 	});
 
 	return msg.setDescription(description);

@@ -1,4 +1,4 @@
-const { judgeAnswer, wait } = require('../helpers/helpers');
+const { judgeAnswer, processResult, wait } = require('../helpers/helpers');
 const { BuzzEmbed, PlayerLeaderboardEmbed, ResultEmbed, QuestionEmbed, TeamLeaderboardEmbed } = require('../helpers/embeds.js');
 
 const commands = ['endtrivia', 'teamlb', 'tlb', 'playerlb', 'plb'];
@@ -26,13 +26,13 @@ async function playGame(channel, startChannel, teamInfo, players, losePoints, nu
 			case 'teamlb':
 			case 'tlb':
 				channel.send({
-					embeds: [TeamLeaderboardEmbed(teamInfo)]
+					embeds: [TeamLeaderboardEmbed(teamInfo, losePoints)]
 				});
 				break;
 			case 'playerlb':
 			case 'plb':
 				channel.send({
-					embeds: [PlayerLeaderboardEmbed(players)]
+					embeds: [PlayerLeaderboardEmbed(players, losePoints)]
 				});
 				break;
 		}
@@ -46,6 +46,8 @@ async function playGame(channel, startChannel, teamInfo, players, losePoints, nu
 			embeds: [questionEmbed]
 		});
 
+		let result = null, response = null, answerer = null, answerTeam = null;
+
 		try {
 			// After the question is sent, look for a player buzz.
 			const buzz = await channel.awaitMessages({
@@ -55,8 +57,8 @@ async function playGame(channel, startChannel, teamInfo, players, losePoints, nu
 				errors: ['time']
 			});
 
-			const answerer = buzz.first().author;
-			const answerTeam = players.get(answerer.id).team;
+			answerer = buzz.first().author;
+			answerTeam = players.get(answerer.id).team;
 			const numAnswers = nextQuestion.multi;
 
 			questionEmbed
@@ -73,47 +75,26 @@ async function playGame(channel, startChannel, teamInfo, players, losePoints, nu
 
 			try {
 				// If a player buzzes in, awaits an answer from that player.
-				const ans = await channel.awaitMessages({
+				response = await channel.awaitMessages({
 					filter: (m) => m.author.id === answerer.id && !commands.includes(m.content),
 					max: numAnswers,
 					time: 1_000 * numSeconds * numAnswers,
 					errors: ['time']
 				});
 
-				// Judges the player's answer and updates the new score.
-				if (judgeAnswer(nextQuestion, ans)) {
-					players.get(answerer.id).score++;
-					teamInfo.get(answerTeam).score++;
-					await channel.send({
-						embeds: [ResultEmbed('correct', nextQuestion, losePoints, answerer.username, ans)]
-					});
-				} else {
-					if (losePoints) {
-						players.get(answerer.id).score--;
-						teamInfo.get(answerTeam).score--;
-					}
-					await channel.send({
-						embeds: [ResultEmbed('incorrect', nextQuestion, losePoints, answerer.username, ans)]
-					});
-				}
+				// Judges the player's answer
+				result = judgeAnswer(nextQuestion, response) ? 'correct' : 'incorrect';
 			} catch (time) {
 				// If a player who buzzes in, runs out of time, calculates new score depending on settings.
-				if (losePoints) {
-					players.get(answerer.id).score--;
-					teamInfo.get(answerTeam).score--;
-				}
-				await channel.send({
-					embeds: [ResultEmbed('time', nextQuestion, losePoints, answerer.username)]
-				});
+				result = 'timeout';
 			}
 		} catch (nobuzz) {
 			// If no player buzzes in, sends an acknowledgement and move on to the next question.
-			await channel.send({
-				embeds: [ResultEmbed('nobuzz', nextQuestion, losePoints, null, null)]
-			});
+			result = 'nobuzz';
 		}
 
-		await wait(5_000);
+		await processResult(result, nextQuestion, response, answerTeam, answerer, teamInfo, players, channel, losePoints);
+		await wait(4_000);
 		questionNumber++;
 	}
 
@@ -123,7 +104,7 @@ async function playGame(channel, startChannel, teamInfo, players, losePoints, nu
 
 	channel.send({
 		content: '## Game Ended! Final Standings:',
-		embeds: [TeamLeaderboardEmbed(teamInfo), PlayerLeaderboardEmbed(players)]
+		embeds: [TeamLeaderboardEmbed(teamInfo, losePoints), PlayerLeaderboardEmbed(players, losePoints)]
 	});
 
 	function endGame() {

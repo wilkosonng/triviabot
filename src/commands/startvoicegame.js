@@ -2,7 +2,7 @@ const { ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType, SlashComman
 const { NoSubscriberBehavior, VoiceConnectionStatus, createAudioPlayer, entersState, joinVoiceChannel, getVoiceConnection } = require('@discordjs/voice');
 const { teams, teamEmojis } = require('../../config.json');
 const { playVoiceGame } = require('../game/playvoicegame');
-const { awaitAudioPlayerReady, randomize, updateLeaderboards } = require('../helpers/helpers');
+const { awaitAudioPlayerReady, randomize, updateStats } = require('../helpers/helpers');
 const { StartEmbed } = require('../helpers/embeds');
 const { existsSync, mkdirSync } = require('fs');
 const { join } = require('path');
@@ -88,7 +88,7 @@ module.exports = {
 		await interaction.respond(choices.map((set) => ({ name: set, value: set })));
 	},
 
-	async execute(interaction, database, currSets, currGames, currGuilds) {
+	async execute(interaction, database, currSets, currGames, currGuilds, voiceSets) {
 		await interaction.deferReply();
 
 		let set = interaction.options?.getString('questionset');
@@ -147,18 +147,6 @@ module.exports = {
 			return;
 		}
 
-		// Adds game to list of ongoing games.
-		currGames.add(channel.id);
-		currGuilds.add(guildId);
-
-		for (let i = 0; i < numTeams; i++) {
-			teamInfo.set(teamEmojis[i], {
-				name: teams[i],
-				players: new Set(),
-				score: 0
-			});
-		}
-
 		try {
 			// If the set is undefined, chooses a random set.
 			if (set == null) {
@@ -190,6 +178,20 @@ module.exports = {
 			console.error(error);
 			return interaction.editReply({
 				content: 'Database reference error.',
+			});
+		}
+
+		// Adds game to list of ongoing games.
+		currGames.add(channel.id);
+		currGuilds.add(guildId);
+
+		for (let i = 0; i < numTeams; i++) {
+			teamInfo.set(teamEmojis[i], {
+				name: teams[i],
+				players: new Set(),
+				correct: 0,
+				incorrect: 0,
+				timeout: 0
 			});
 		}
 
@@ -278,7 +280,9 @@ module.exports = {
 				players.set(player, {
 					name: username,
 					team: newTeam,
-					score: 0
+					correct: 0,
+					incorrect: 0,
+					timeout: 0
 				});
 
 				return buttonInteraction.update(
@@ -313,6 +317,7 @@ module.exports = {
 			switch (lowercaseMsg) {
 				case 'ready':
 					if (players.size) {
+						const numQuestions = questions.length;
 						const setPath = join(cacheFolder, set);
 						startCollector.stop();
 						joinCollector.stop();
@@ -323,12 +328,20 @@ module.exports = {
 						}
 
 						msg.reply('Game starting... Type `endtrivia` to end the game, `playerlb` to access player scores, and `teamlb` to access team scores!');
+						voiceSets.set(set, voiceSets.has(set) ? voiceSets.get(set) + 1 : 1);
 						await playVoiceGame(channel, startChannel, teamInfo, players, losePoints, numSeconds, set, questions, description, audioPlayer, ttsClient, setPath);
+
+						if (voiceSets.get(set) === 1) {
+							voiceSets.delete(set);
+						} else {
+							voiceSets[set]--;
+						}
+
 						endGame();
 
-						// If the game was ranked, updates the leaderboards.
-						if (ranked) {
-							updateLeaderboards(database, players);
+						// Updates leaderboards if game was ranked, all questions were asked, or if at least 10 questions were played.
+						if (ranked || !questions.length || numQuestions - questions.length >= 10) {
+							updateStats(database, players, ranked, losePoints);
 						}
 					} else {
 						channel.send('Need at least one player to start!');
