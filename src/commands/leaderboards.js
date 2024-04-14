@@ -40,6 +40,8 @@ module.exports = {
 					{ name: 'Ranked Timeouts', value: 'rankedTimeout' },
 					{ name: 'Ranked Buzzes', value: 'rankedBuzzes' },
 					{ name: 'Ranked Games Played', value: 'rankedPlayed' },
+					{ name: 'Ranked Games Won', value: 'rankedWon' },
+					{ name: 'Ranked Win Percentage', value: 'rankedWinRate' },
 					{ name: 'Ranked Accuracy', value: 'rankedAccuracy' },
 					{ name: 'Unranked Score', value: 'unrankedScore' },
 					{ name: 'Unranked Correct', value: 'unrankedCorrect' },
@@ -119,6 +121,7 @@ function getMapping(query) {
 		case 'rankedIncorrect':
 		case 'rankedTimeout':
 		case 'rankedPlayed':
+		case 'rankedWon':
 		case 'unrankedScore':
 		case 'unrankedCorrect':
 		case 'unrankedIncorrect':
@@ -127,6 +130,8 @@ function getMapping(query) {
 			return ([p, e]) => [p, e[query]];
 
 		// Derivative values that require additional mapping.
+		case 'rankedWinRate':
+			return ([p, e]) => [p, Math.round(e['rankedWon'] * 10_000 / e['rankedPlayed']) / 100];
 		case 'rankedBuzzes':
 			return ([p, e]) => [p, e['rankedCorrect'] + e['rankedIncorrect'] + e['rankedTimeout']];
 		case 'unrankedBuzzes':

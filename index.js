@@ -136,6 +136,7 @@ client.on(Events.InteractionCreate, async interaction => {
 					await command.execute(interaction, Object.entries(sets));
 					break;
 				case 'leaderboards':
+				case 'profile':
 					await command.execute(interaction, stats);
 					break;
 				case 'info':

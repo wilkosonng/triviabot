@@ -73,11 +73,15 @@
   },
 
   "leaderboards": {
-    "description": "Displays the current ranked game leaderboards.",
+    "description": "Displays the current leaderboard standings for a given statistic and timeframe.",
     "fields": [
       {
         "name": "Page `(optional)` -",
         "value": "The page of the list you wish to start at. If left blank, starts at page 1."
+      },
+      {
+        "name": "Stat `(optional)` -",
+        "value": "The statistic to display and sort by. If left blank, displays the Ranked Score statistic."
       },
       {
         "name": "Type `(optional)` -",
@@ -103,6 +107,24 @@
   "ping": {
     "description": "Pings the bot. If successful, the bot should respond with a `Pong!`",
     "fields": []
+  },
+
+  "profile": {
+    "description": "Displays a user's profile with a detailed breakdown of statistics.",
+    "fields": [
+      {
+        "name": "Page `(optional)` -",
+        "value": "The page of the list you wish to start at. If left blank, starts at page 1."
+      },
+      {
+        "name": "Stat `(optional)` -",
+        "value": "The statistic to display and sort by. If left blank, displays the Ranked Score statistic."
+      },
+      {
+        "name": "Type `(optional)` -",
+        "value": "The type of leaderboard to display, which can be changed via additional interactions (either All Time, Daily, Weekly, or Monthly)."
+      }
+    ]
   },
 
   "setinfo": {

@@ -1,4 +1,4 @@
-const { Client, Member, EmbedBuilder, bold, underscore, inlineCode, userMention, time } = require('discord.js');
+const { AttachmentBuilder, Client, EmbedBuilder, GuildMember, bold, underscore, inlineCode, userMention, time } = require('discord.js');
 const { embedColor, teams, teamEmojis } = require('../../config.json');
 const info = require('./info.json');
 
@@ -7,7 +7,7 @@ const info = require('./info.json');
  *
  * @param {string} title The title of the question set.
  * @param {string} description The description of the question set.
- * @param {Member} author The user who submitted the question set.
+ * @param {GuildMember} author The user who submitted the question set.
  * @param {Array} questionSet The question set.
  *
  * @return {EmbedBuilder} The embed to be displayed.
@@ -18,7 +18,7 @@ function AddSummaryEmbed(title, description, author, questionSet) {
 		.setTitle(title)
 		.setDescription(description)
 		.setAuthor({
-			name: author.displayName,
+			name: author.username,
 			iconURL: author.displayAvatarURL()
 		})
 		.setFields(
@@ -170,6 +170,21 @@ function PlayerLeaderboardEmbed(players, losePoints) {
 		description += `${inlineCode(`${losePoints ? player.correct - player.incorrect - player.timeout : player.correct} points (${player.correct}/${player.incorrect}/${player.timeout})`)} - ${player.name}\n`;
 	});
 	return msg.setDescription(description);
+}
+
+function ProfileEmbed(user, stats, ranked) {
+	const msg = new EmbedBuilder()
+		.setColor(embedColor)
+		.setTitle(bold(`🪪 ${user.username}'s ${ranked ? 'Ranked' : 'Unranked'} Profile 🪪`))
+		.addFields(...Object.entries(stats).map(([statName, stat]) => ({
+			name: bold(underscore(getStatString(statName))),
+			value: String(stat),
+			inline: true
+		})))
+		.setThumbnail(user.displayAvatarURL())
+		.setImage(`attachment://${user.id}_pie.png`);
+
+	return msg;
 }
 
 /**
@@ -359,5 +374,5 @@ function VoiceQuestionEmbed(questionSet, num, question) {
 
 module.exports = {
 	AddSummaryEmbed, BuzzEmbed, GeneralLeaderboardEmbed, InfoEmbed, ListEmbed, PlayerLeaderboardEmbed,
-	ResultEmbed, QuestionEmbed, QuestionInfoEmbed, StartEmbed, TeamLeaderboardEmbed, VoiceQuestionEmbed
+	ProfileEmbed, ResultEmbed, QuestionEmbed, QuestionInfoEmbed, StartEmbed, TeamLeaderboardEmbed, VoiceQuestionEmbed
 };

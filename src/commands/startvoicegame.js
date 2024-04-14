@@ -341,7 +341,7 @@ module.exports = {
 
 						// Updates leaderboards if game was ranked, all questions were asked, or if at least 10 questions were played.
 						if (ranked || !questions.length || numQuestions - questions.length >= 10) {
-							updateStats(database, players, ranked, losePoints);
+							updateStats(database, set, players, teamInfo, ranked, losePoints);
 						}
 					} else {
 						channel.send('Need at least one player to start!');

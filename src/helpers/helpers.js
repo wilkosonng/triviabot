@@ -42,6 +42,34 @@ async function awaitAudioPlayerReady(audioPlayer, callback = () => ({})) {
 	});
 }
 
+/**
+ * Waits for the audio player to reach the idle state, then executes the callback.
+ * @param {Array<T>} arr The array to search
+ * @param {U} val value to compare to using the comparator function.
+ * @param {function(U, T) : number} comp The comparator function that takes in val, arr[i] and outputs < 0 if val < arr[i], = 0 if val = arr[i], and > 0 if val > arr[i].
+ *
+ * @returns {number} The index within the array the target value is located at; -1 if not present.
+ */
+function binarySearch(arr, val, comp) {
+	let left = 0, right = arr.length - 1;
+	while (left <= right) {
+		const mid = (left + right / 2) | 0;
+		const res = comp(val, arr[mid]);
+		if (res === 0) {
+			return mid;
+		} else if (res > 0) {
+			left = mid + 1;
+		} else {
+			right = mid - 1;
+		}
+	}
+
+	return -1;
+}
+
+/**
+ * Clears all cache in the cache folder that has not been accessed within the cacheTime variable.
+ */
 async function clearCache() {
 	// Gets all cache directories.
 	const directories = readdirSync(cacheFolder, { withFileTypes: true })
@@ -76,7 +104,6 @@ async function clearCache() {
  * @returns {boolean} Whether or not the deletion was a success
 */
 function deleteSet(database, title) {
-	// TODO: Update to also remove cache if it exists
 	try {
 		(async () => {
 			// Attempts to remove the question set metadata from the database.
@@ -247,8 +274,22 @@ function uploadSet(database, questionSet, title, description, owner) {
  *
  * @returns {boolean} Whether or not the update was a success
 */
-function updateStats(database, result, ranked, losePoints) {
-	const leaderboards = ['alltime', 'weekly', 'monthly'];
+function updateStats(database, setName, result, teamResult, ranked, losePoints) {
+	const statTypes = ['alltime', 'weekly', 'monthly'];
+
+	// Finds the winning team.
+	let winningTeam = new Set();
+	let max = Number.NEGATIVE_INFINITY;
+
+	for (const team of teamResult.values()) {
+		const teamScore = losePoints ? team.correct - team.incorrect - team.timeout : team.correct;
+		if (teamScore > max) {
+			max = teamScore;
+			winningTeam = team.players;
+		} else if (teamScore === max) {
+			winningTeam.union(team.players);
+		}
+	}
 
 	try {
 		return (async () => {
@@ -257,8 +298,8 @@ function updateStats(database, result, ranked, losePoints) {
 				.then((snapshot) => {
 					if (snapshot.exists()) {
 						const currBoard = snapshot.val();
-						for (const board of leaderboards) {
-							const selectedBoard = currBoard[board] === '' ? new Map() : new Map(Object.entries(currBoard[board]));
+						for (const stats of statTypes) {
+							const selectedBoard = currBoard[stats] === '' ? new Map() : new Map(Object.entries(currBoard[stats]));
 
 							for (const [player, info] of result) {
 								const playerObject = selectedBoard.has(player) ? selectedBoard.get(player) : {
@@ -267,11 +308,13 @@ function updateStats(database, result, ranked, losePoints) {
 									rankedIncorrect: 0,
 									rankedTimeout: 0,
 									rankedPlayed: 0,
+									rankedWon: 0,
 									unrankedScore: 0,
 									unrankedCorrect: 0,
 									unrankedIncorrect: 0,
 									unrankedTimeout: 0,
-									unrankedPlayed: 0
+									unrankedPlayed: 0,
+									unrankedWon: 0
 								};
 
 								playerObject[ranked ? 'rankedScore' : 'unrankedScore'] += losePoints ? info.correct - info.incorrect - info.timeout : info.correct;
@@ -279,12 +322,20 @@ function updateStats(database, result, ranked, losePoints) {
 								playerObject[ranked ? 'rankedIncorrect' : 'unrankedIncorrect'] += info.incorrect;
 								playerObject[ranked ? 'rankedTimeout' : 'unrankedTimeout'] += info.timeout;
 								playerObject[ranked ? 'rankedPlayed' : 'unrankedPlayed']++;
+
+								if (stats === 'alltime') {
+									playerObject['lastPlayedSet'] = setName;
+									playerObject['lastPlayedTime'] = (Date.now() / 1000) | 0;
+								}
+
+								if ((ranked || teamResult.length > 1) && winningTeam.has(player)) {
+									playerObject[ranked ? 'rankedWon' : 'unrankedWon']++;
+								}
+
 								selectedBoard.set(player, playerObject);
 							}
 
-							const newBoard = [...selectedBoard.entries()].sort((a, b) => a[0].localeCompare(b[0]));
-
-							currBoard[board] = Object.fromEntries(newBoard);
+							currBoard[stats] = Object.fromEntries(selectedBoard);
 						}
 
 						// Attempts to push update.
@@ -318,6 +369,6 @@ async function wait(time) {
 }
 
 module.exports = {
-	awaitAudioPlayerReady, clearCache, deleteSet, judgeAnswer, processResult, randomize,
+	awaitAudioPlayerReady, binarySearch, clearCache, deleteSet, judgeAnswer, processResult, randomize,
 	removeWhiteSpace, replaceLineBreaks, resetLeaderboard, updateStats, uploadSet, wait
 };
