@@ -19,6 +19,11 @@ Additional information can be obtained using the `/info` command.
 - `/listsets` - Lists up to 10 question sets that match the given query.
 - `/setinfo` - Provides information and data on the given question set.
 
+### Profiles and Statistics
+
+- `/leaderboard` - Shows the current leaderboard in a given stat, toggleable between time periods.
+- `/profile` - Displays the profile statistics of a given user.
+
 ### Playing Trivia
 
 - `/startgame` - Starts a text channel-based game.
