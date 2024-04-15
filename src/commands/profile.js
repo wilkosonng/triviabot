@@ -1,5 +1,6 @@
-const { AttachmentBuilder, SlashCommandBuilder, time } = require('discord.js');
+const { AttachmentBuilder, SlashCommandBuilder } = require('discord.js');
 const { ChartJSNodeCanvas } = require('chartjs-node-canvas');
+const ChartDataLabels = require('chartjs-plugin-datalabels');
 const { join } = require('path');
 const { rm, writeFile } = require('fs/promises');
 const { binarySearch } = require('../helpers/helpers');
@@ -10,6 +11,7 @@ const canvas = new ChartJSNodeCanvas({
 	width: 1200,
 	height: 900,
 	chartCallback: (ChartJS) => {
+		ChartJS.register(ChartDataLabels);
 		ChartJS.defaults.color = '#ffffff';
 		ChartJS.defaults.responsive = true;
 		ChartJS.defaults.maintainAspectRatio = false;
@@ -76,6 +78,8 @@ module.exports = {
 };
 
 async function generateImage({ correct, incorrect, timeout }, filename, username) {
+	const total = correct + incorrect + timeout;
+
 	return new Promise(async (resolve) => {
 		const url = join(publicFolder, filename);
 		const buffer = await canvas.renderToBuffer({
@@ -115,6 +119,13 @@ async function generateImage({ correct, incorrect, timeout }, filename, username
 							},
 							padding: 20
 						}
+					},
+					datalabels: {
+						formatter: (value) => value === 0 ? '' : `${Math.round(value / total * 10_000) / 100}%`,
+						font: {
+							size: 36
+						},
+						color: (context) => context.chart.data.datasets[0].borderColor[context.dataIndex],
 					}
 				}
 			}
