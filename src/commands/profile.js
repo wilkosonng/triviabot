@@ -121,7 +121,7 @@ async function generateImage({ correct, incorrect, timeout }, filename, username
 						}
 					},
 					datalabels: {
-						formatter: (value) => value === 0 ? '' : `${Math.round(value / total * 10_000) / 100}%`,
+						formatter: (value) => value === 0 ? '' : `${Math.round(value / total * 1_000) / 10}%`,
 						font: {
 							size: 36
 						},
