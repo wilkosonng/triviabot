@@ -41,7 +41,7 @@ module.exports = {
 					{ name: 'Ranked Buzzes', value: 'rankedBuzzes' },
 					{ name: 'Ranked Games Played', value: 'rankedPlayed' },
 					{ name: 'Ranked Games Won', value: 'rankedWon' },
-					{ name: 'Ranked Win Percentage', value: 'rankedWinRate' },
+					{ name: 'Ranked Win Rate', value: 'rankedWinRate' },
 					{ name: 'Ranked Accuracy', value: 'rankedAccuracy' },
 					{ name: 'Unranked Score', value: 'unrankedScore' },
 					{ name: 'Unranked Correct', value: 'unrankedCorrect' },
@@ -49,7 +49,9 @@ module.exports = {
 					{ name: 'Unranked Timeouts', value: 'unrankedTimeout' },
 					{ name: 'Unranked Buzzes', value: 'unrankedBuzzes' },
 					{ name: 'Unranked Games Played', value: 'unrankedPlayed' },
-					{ name: 'Unranked Accuracy', value: 'unrankedAccuracy' },
+					{ name: 'Unranked Games Won', value: 'unrankedWon' },
+					{ name: 'Unranked Win Rate', value: 'unrankedWinRate' },
+					{ name: 'Unranked Accuracy', value: 'unrankedAccuracy' }
 				))
 		.addStringOption(option =>
 			option
@@ -127,11 +129,14 @@ function getMapping(query) {
 		case 'unrankedIncorrect':
 		case 'unrankedTimeout':
 		case 'unrankedPlayed':
+		case 'unrankedWon':
 			return ([p, e]) => [p, e[query]];
 
 		// Derivative values that require additional mapping.
 		case 'rankedWinRate':
 			return ([p, e]) => [p, Math.round(e['rankedWon'] * 10_000 / e['rankedPlayed']) / 100];
+		case 'unrankedWinRate':
+			return ([p, e]) => [p, Math.round(e['unrankedWon'] * 10_000 / e['unrankedPlayed']) / 100];
 		case 'rankedBuzzes':
 			return ([p, e]) => [p, e['rankedCorrect'] + e['rankedIncorrect'] + e['rankedTimeout']];
 		case 'unrankedBuzzes':
