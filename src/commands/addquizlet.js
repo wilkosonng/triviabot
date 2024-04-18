@@ -111,7 +111,7 @@ module.exports = {
 		}
 
 		// Constructs an embed summary.
-		const summary = AddSummaryEmbed(title, description, interaction.member, questionSet);
+		const summary = AddSummaryEmbed(title, description, user, questionSet);
 
 		interaction.channel.send({
 			embeds: [summary],
