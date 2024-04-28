@@ -178,7 +178,7 @@ async function playVoiceGame(channel, startChannel, teamInfo, players, losePoint
 				result = judgeAnswer(nextQuestion, response) ? 'correct' : 'incorrect';
 			} catch (time) {
 				// If a player who buzzes in, runs out of time, calculates new score depending on settings.
-				result = 'timeout';
+				result = 'time';
 			}
 		} catch (nobuzz) {
 			// If no player buzzes in, sends an acknowledgement and move on to the next question.
