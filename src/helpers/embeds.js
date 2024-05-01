@@ -257,7 +257,7 @@ function ResultEmbed(correct, question, losePoints, answerer, response) {
 			description = losePoints ? `${answerer} has just lost their team 1 point!` : `Unfortunately, ${answerer} did not answer correctly!`;
 			break;
 		}
-		case 'timeout': {
+		case 'time': {
 			emoji = '⏱️';
 			message = 'Time\'s Up!';
 			description = losePoints ? `${answerer} has just lost their team 1 point!` : `Unfortunately, ${answerer} did not answer correctly!`;
